@@ -1,0 +1,2149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Floorwalk — Flooring Sales Companion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+/* ============ THEME TOKENS ============ */
+:root{
+  --bg:#e8f4f2; --surface:#ffffff; --surface-2:#f0faf8; --surface-3:#e2f2ef;
+  --ink:#231f1a; --ink-2:#5b5147; --muted:#928678; --line:#e6dccd; --line-2:#efe7da;
+  --accent:#8a5a2b; --accent-2:#6f4621; --accent-soft:#f1e4d3; --accent-ink:#ffffff;
+  --good:oklch(0.60 0.09 150); --good-soft:oklch(0.94 0.04 150);
+  --warn:oklch(0.70 0.12 72); --warn-soft:oklch(0.95 0.05 75);
+  --danger:oklch(0.57 0.14 30); --danger-soft:oklch(0.95 0.05 32);
+  --radius:14px; --radius-sm:10px; --radius-lg:20px;
+  --shadow:0 1px 2px rgba(40,28,14,.05), 0 8px 24px -12px rgba(40,28,14,.18);
+  --shadow-lg:0 12px 40px -12px rgba(40,28,14,.28);
+  --fs:16px;
+}
+:root[data-theme="terracotta"]{
+  --accent:#b0552f; --accent-2:#8f4324; --accent-soft:#f6e3d8;
+}
+:root[data-theme="slate"]{
+  --accent:#3f5d78; --accent-2:#314a61; --accent-soft:#e0e7ee;
+  --bg:#eef0f2; --surface-2:#f6f8fa; --surface-3:#eef1f4; --line:#dde2e7; --line-2:#e8ecf0; --muted:#7c8794;
+}
+:root[data-corners="sharp"]{ --radius:6px; --radius-sm:4px; --radius-lg:8px; }
+:root[data-dark="true"]{
+  --bg:#16120d; --surface:#211b14; --surface-2:#1b1610; --surface-3:#262017;
+  --ink:#f3ece1; --ink-2:#cbbfae; --muted:#9b8f7e; --line:#352c20; --line-2:#2c241a;
+  --accent-soft:#33271a;
+  --good-soft:oklch(0.30 0.04 150); --warn-soft:oklch(0.32 0.05 75); --danger-soft:oklch(0.30 0.05 32);
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.6);
+  --shadow-lg:0 12px 40px -12px rgba(0,0,0,.7);
+}
+:root[data-dark="true"][data-theme="slate"]{ --bg:#0f1419; --surface:#1a2027; --surface-2:#161b21; --surface-3:#1f262e; --line:#2a333d; }
+
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0; padding:0;}
+body{
+  font-family:"Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  background:var(--bg); color:var(--ink); font-size:var(--fs);
+  -webkit-font-smoothing:antialiased; line-height:1.45;
+  overscroll-behavior:none;
+}
+#root{min-height:100vh;}
+
+/* ============ APP SHELL ============ */
+.app{
+  max-width:780px; margin:0 auto; min-height:100vh; position:relative;
+  background:var(--bg); display:flex; flex-direction:column;
+}
+@media(min-width:820px){
+  body{padding:0;}
+  .app{box-shadow:0 0 0 1px var(--line), var(--shadow-lg); min-height:100vh;}
+}
+.screen{flex:1; padding:0 0 96px; animation:fade .25s ease;}
+@keyframes fade{from{opacity:0;} to{opacity:1;}}
+
+/* ============ TOP BAR ============ */
+.topbar{
+  position:sticky; top:0; z-index:30; background:color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter:saturate(1.4) blur(12px); border-bottom:1px solid var(--line);
+  padding:14px 18px; display:flex; align-items:center; gap:12px;
+}
+.topbar h1{font-size:19px; font-weight:800; letter-spacing:-.02em; margin:0; flex:1; min-width:0;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.topbar .sub{font-size:12.5px; color:var(--muted); font-weight:500;}
+.iconbtn{
+  width:40px; height:40px; flex:none; border:1px solid var(--line); background:var(--surface);
+  border-radius:var(--radius-sm); display:grid; place-items:center; cursor:pointer; color:var(--ink);
+  transition:.15s; padding:0;
+}
+.iconbtn:hover{background:var(--surface-2); border-color:var(--accent);}
+.iconbtn.ghost{border-color:transparent; background:transparent;}
+.iconbtn.ghost:hover{background:var(--surface-2);}
+
+/* ============ BRAND ============ */
+.brandmark{width:34px; height:34px; border-radius:9px; background:var(--accent); flex:none;
+  display:grid; place-items:center; box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);}
+.brandmark span{display:block; width:14px; height:14px; border-radius:3px;
+  background:repeating-linear-gradient(90deg, var(--accent-ink) 0 3px, transparent 3px 5px);}
+
+/* ============ GENERIC ============ */
+.pad{padding:18px;}
+.row{display:flex; align-items:center; gap:12px;}
+.col{display:flex; flex-direction:column;}
+.grow{flex:1; min-width:0;}
+.spread{display:flex; align-items:center; justify-content:space-between; gap:12px;}
+.muted{color:var(--muted);} .ink2{color:var(--ink-2);}
+.tiny{font-size:12px;} .sm{font-size:13.5px;} .lg{font-size:18px;}
+.b{font-weight:700;} .sb{font-weight:600;} .xb{font-weight:800; letter-spacing:-.01em;}
+.eyebrow{font-size:11.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--muted);}
+.divider{height:1px; background:var(--line); margin:14px 0;}
+.spacer{height:14px;}
+
+.card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow);}
+.card.flat{box-shadow:none;}
+.section-title{font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:0 0 10px;}
+
+/* Pills */
+.pill{display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:999px;
+  font-size:12px; font-weight:700; background:var(--surface-3); color:var(--ink-2); border:1px solid var(--line);
+  white-space:nowrap;}
+.pill .dot{width:7px; height:7px; border-radius:50%; background:currentColor;}
+.pill.lead{color:var(--muted);}
+.pill.quoting{color:var(--warn); background:var(--warn-soft); border-color:transparent;}
+.pill.sold{color:var(--accent); background:var(--accent-soft); border-color:transparent;}
+.pill.scheduled{color:var(--good); background:var(--good-soft); border-color:transparent;}
+.pill.complete{color:var(--good); background:var(--good-soft); border-color:transparent;}
+
+/* Buttons */
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; font-family:inherit;
+  font-size:15px; font-weight:700; padding:12px 18px; border-radius:var(--radius-sm); cursor:pointer;
+  border:1px solid var(--line); background:var(--surface); color:var(--ink); transition:.15s; line-height:1;}
+.btn:hover{background:var(--surface-2);}
+.btn.primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent);}
+.btn.primary:hover{background:var(--accent-2);}
+.btn.block{width:100%;}
+.btn.sm{font-size:13.5px; padding:9px 13px;}
+.btn:active{transform:translateY(1px);}
+
+/* Inputs */
+.field{display:flex; flex-direction:column; gap:6px; margin-bottom:14px;}
+.field label{font-size:12.5px; font-weight:700; color:var(--ink-2); letter-spacing:.01em;}
+.input, textarea.input, select.input{
+  font-family:inherit; font-size:15.5px; color:var(--ink); background:var(--surface);
+  border:1px solid var(--line); border-radius:var(--radius-sm); padding:11px 13px; width:100%; transition:.15s;
+}
+.input:focus, textarea.input:focus, select.input:focus{outline:none; border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-soft);}
+.input::placeholder{color:var(--muted);}
+textarea.input{resize:vertical; min-height:72px; line-height:1.5;}
+
+/* Segmented control */
+.seg{display:inline-flex; background:var(--surface-3); border:1px solid var(--line); border-radius:var(--radius-sm); padding:3px; gap:3px;}
+.seg button{font-family:inherit; font-size:13.5px; font-weight:700; border:none; background:transparent;
+  color:var(--ink-2); padding:7px 14px; border-radius:calc(var(--radius-sm) - 3px); cursor:pointer; transition:.15s;
+  display:inline-flex; align-items:center; gap:6px;}
+.seg button.on{background:var(--surface); color:var(--accent); box-shadow:var(--shadow);}
+.seg.full{display:flex;} .seg.full button{flex:1; justify-content:center;}
+
+/* Bottom tab bar */
+.tabbar{
+  position:fixed; bottom:0; left:0; right:0; z-index:40;
+  background:color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter:blur(14px) saturate(1.4);
+  border-top:1px solid var(--line); display:flex; padding:8px 8px calc(8px + env(safe-area-inset-bottom));
+  max-width:780px; margin:0 auto;
+}
+.tabbar button{flex:1; border:none; background:transparent; cursor:pointer; font-family:inherit;
+  display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 4px; color:var(--muted);
+  font-size:11px; font-weight:700; border-radius:10px; transition:.15s;}
+.tabbar button.on{color:var(--accent);}
+.tabbar button .badge{position:absolute; transform:translate(14px,-6px); background:var(--danger); color:#fff;
+  font-size:9.5px; min-width:16px; height:16px; border-radius:8px; display:grid; place-items:center; padding:0 4px; font-weight:800;}
+
+/* FAB */
+.fab{position:fixed; right:max(18px, calc(50% - 390px + 18px)); bottom:calc(84px + env(safe-area-inset-bottom));
+  z-index:45; width:56px; height:56px; border-radius:50%; background:var(--accent); color:var(--accent-ink);
+  border:none; cursor:pointer; box-shadow:var(--shadow-lg); display:grid; place-items:center; transition:.15s;}
+.fab:hover{background:var(--accent-2); transform:scale(1.04);}
+
+/* Sheet / modal */
+.scrim{position:fixed; inset:0; z-index:60; background:rgba(30,20,8,.42); backdrop-filter:blur(2px);
+  display:flex; align-items:flex-end; justify-content:center; animation:fade .2s;}
+@media(min-width:820px){ .scrim{align-items:center;} }
+.sheet{background:var(--surface); width:100%; max-width:780px; max-height:92vh; overflow-y:auto;
+  border-radius:var(--radius-lg) var(--radius-lg) 0 0; box-shadow:var(--shadow-lg); animation:slideup .28s cubic-bezier(.2,.8,.2,1);}
+@media(min-width:820px){ .sheet{border-radius:var(--radius-lg); max-width:560px;} }
+@keyframes slideup{from{transform:translateY(40px); opacity:.6;} to{transform:none; opacity:1;}}
+.sheet-head{position:sticky; top:0; background:var(--surface); border-bottom:1px solid var(--line);
+  padding:16px 18px; display:flex; align-items:center; gap:12px; z-index:2;}
+.sheet-grab{width:38px; height:4px; border-radius:2px; background:var(--line); margin:8px auto 0;}
+
+/* Checklist item */
+.qitem{display:flex; gap:12px; padding:14px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); transition:.15s;}
+.qitem + .qitem{margin-top:9px;}
+.qitem.home{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft);}
+.qitem.answered{background:var(--surface-2);}
+.checkbox{width:26px; height:26px; flex:none; border-radius:8px; border:2px solid var(--line); background:var(--surface);
+  cursor:pointer; display:grid; place-items:center; transition:.15s; margin-top:1px;}
+.checkbox.yes{background:var(--good); border-color:var(--good); color:#fff;}
+.checkbox.no{background:var(--danger); border-color:var(--danger); color:#fff;}
+.checkbox.flag{background:var(--warn); border-color:var(--warn); color:#fff;}
+
+/* Product chip / status */
+.prodcard{border:1px solid var(--line); border-radius:var(--radius); padding:13px 14px; background:var(--surface);}
+.prodcard + .prodcard{margin-top:9px;}
+.status-tag{font-size:11px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; padding:3px 8px; border-radius:6px;}
+.status-tag.selected{background:var(--good-soft); color:var(--good);}
+.status-tag.considering{background:var(--warn-soft); color:var(--warn);}
+
+/* empty state */
+.empty{text-align:center; padding:48px 28px; color:var(--muted);}
+.empty .ic{width:60px; height:60px; border-radius:16px; background:var(--surface-3); display:grid; place-items:center; margin:0 auto 16px; color:var(--accent);}
+
+/* photos */
+.photogrid{display:grid; grid-template-columns:repeat(auto-fill, minmax(82px,1fr)); gap:8px;}
+.thumb{aspect-ratio:1; border-radius:var(--radius-sm); border:1px solid var(--line); background-size:cover; background-position:center;
+  cursor:pointer; padding:0; position:relative; overflow:hidden;}
+.thumb.add{background:var(--surface-2); border:1.5px dashed var(--line); color:var(--accent); display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:4px; font-size:11px; font-weight:700; font-family:inherit;}
+.thumb.add:hover{border-color:var(--accent); background:var(--accent-soft);}
+.lightbox{position:fixed; inset:0; z-index:80; background:rgba(8,5,2,.94); display:flex; flex-direction:column;
+  align-items:center; justify-content:center; animation:fade .2s;}
+.lb-bar{position:absolute; top:0; left:0; right:0; display:flex; align-items:center; gap:8px; padding:14px 16px;
+  background:linear-gradient(rgba(0,0,0,.5), transparent);}
+.lb-img{max-width:94vw; max-height:84vh; border-radius:8px; box-shadow:0 20px 60px rgba(0,0,0,.6);}
+
+/* placeholder swatch for product imagery */
+.swatch{width:46px; height:46px; border-radius:10px; flex:none; border:1px solid var(--line);
+  background-image:repeating-linear-gradient(45deg, var(--surface-3) 0 6px, var(--surface-2) 6px 12px);}
+
+/* progress bar */
+.bar{height:8px; border-radius:999px; background:var(--surface-3); overflow:hidden;}
+.bar > i{display:block; height:100%; background:var(--accent); border-radius:999px; transition:width .4s;}
+
+a{color:var(--accent);}
+.linkbtn{background:none; border:none; color:var(--accent); font-weight:700; font-family:inherit; cursor:pointer; padding:0; font-size:inherit;}
+.scrim, .sheet{-webkit-overflow-scrolling:touch;}
+::-webkit-scrollbar{width:8px; height:8px;}
+::-webkit-scrollbar-thumb{background:var(--line); border-radius:8px;}
+</style>
+</head>
+<body style="background-color: rgb(227, 234, 240)">
+<div id="root"></div>
+
+<template id="__bundler_thumbnail">
+  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" rx="20" fill="#8a5a2b"/>
+    <g fill="#f1ece4">
+      <rect x="30" y="34" width="40" height="7" rx="2"/>
+      <rect x="30" y="47" width="40" height="7" rx="2"/>
+      <rect x="30" y="60" width="40" height="7" rx="2"/>
+    </g>
+  </svg>
+</template>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script>
+/* Floorwalk — seed data, question bank, persistence helpers (plain JS, window globals) */
+(function () {
+  "use strict";
+
+  // ---- Product categories (become the per-room product tabs) ----
+  const CATEGORIES = [
+    { id: "hardwood",   label: "Hardwood",        group: "Flooring" },
+    { id: "lvp",        label: "Luxury Vinyl (LVP)", group: "Flooring" },
+    { id: "laminate",   label: "Laminate",        group: "Flooring" },
+    { id: "tile",       label: "Tile",            group: "Flooring" },
+    { id: "carpet",     label: "Carpet",          group: "Flooring" },
+    { id: "stone",      label: "Natural Stone",   group: "Flooring" },
+    { id: "rugs",       label: "Area Rugs",       group: "Flooring" },
+    { id: "backsplash", label: "Backsplash",      group: "Surfaces" },
+    { id: "shower",     label: "Showers",         group: "Surfaces" },
+    { id: "tub",        label: "Tub Surrounds",   group: "Surfaces" },
+    { id: "grout",      label: "Grout Color",     group: "Finishes" },
+    { id: "paint",      label: "Paint",           group: "Finishes" },
+    { id: "trim",       label: "Trim / Molding",  group: "Finishes" },
+    { id: "bullnose",   label: "Bullnose / Edge", group: "Finishes" },
+    { id: "hardware",   label: "Hardware",        group: "Finishes" },
+    { id: "pad",        label: "Carpet Pad",      group: "Accessories" },
+    { id: "underlay",   label: "Underlayment",    group: "Accessories" },
+    { id: "other",      label: "Other",           group: "Accessories" },
+  ];
+
+  const PROJECT_TYPES = [
+    "Remodel / renovation",
+    "New construction",
+    "Whole-home",
+    "Single-room replacement",
+    "Commercial",
+    "Insurance / water damage",
+  ];
+
+  const STATUSES = [
+    { id: "lead",      label: "Lead" },
+    { id: "quoting",   label: "Quoting" },
+    { id: "sold",      label: "Sold" },
+    { id: "scheduled", label: "Scheduled" },
+    { id: "complete",  label: "Complete" },
+  ];
+
+  const ROOM_PRESETS = [
+    "Kitchen", "Living Room", "Family Room", "Dining Room", "Master Bedroom",
+    "Bedroom", "Master Bath", "Bathroom", "Powder Room", "Laundry Room",
+    "Mudroom", "Entry / Foyer", "Hallway", "Stairs", "Basement", "Office",
+    "Whole Floor",
+  ];
+
+  // ---- Question bank ----
+  // ctx: which visit contexts the question matters in. "store" = in-store, "home" = at-home.
+  // Questions tagged ONLY "home" are the ones that light up once you're standing in the house.
+  // cat: bucket. flagKind hints the kind of follow-up it implies.
+  const QUESTIONS = [
+    // Discovery — always
+    { id: "rooms",     ctx: ["store", "home"], cat: "Discovery",  q: "Which rooms are we doing?", hint: "Confirm full scope up front." },
+    { id: "driving",   ctx: ["store", "home"], cat: "Discovery",  q: "What's driving the project — style, damage, selling, new build?" },
+    { id: "timeline",  ctx: ["store", "home"], cat: "Discovery",  q: "What's the timeline / target date?", hint: "Sets ordering & install urgency." },
+    { id: "budget",    ctx: ["store", "home"], cat: "Discovery",  q: "What's the budget range?", hint: "Good vs. better vs. best." },
+    { id: "floorplan", ctx: ["store", "home"], cat: "Discovery",  q: "Are there floor plans or blueprints?", hint: "Ask them to email a copy." },
+    { id: "decmaker",  ctx: ["store", "home"], cat: "Discovery",  q: "Is everyone deciding here today?" },
+
+    // Product specifics — mostly in-store selection, still relevant at home
+    { id: "grout",     ctx: ["store", "home"], cat: "Selections", q: "Grout color picked for each tiled area?" },
+    { id: "trimcolor", ctx: ["store", "home"], cat: "Selections", q: "Trim / molding color & profile chosen?" },
+    { id: "bullnose",  ctx: ["store", "home"], cat: "Selections", q: "Is bullnose / edge trim needed?" },
+    { id: "pad",       ctx: ["store", "home"], cat: "Selections", q: "Carpet pad — standard or upgrade?" },
+    { id: "transition",ctx: ["store", "home"], cat: "Selections", q: "Transitions between rooms / flooring types?" },
+    { id: "hardware",  ctx: ["store", "home"], cat: "Selections", q: "Cabinet / door hardware in scope?" },
+
+    // Trades & scope
+    { id: "plumbing",  ctx: ["store", "home"], cat: "Trades",     q: "Any plumbing work needed?", hint: "Toilet pulls, supply lines, drains." },
+    { id: "electrical",ctx: ["store", "home"], cat: "Trades",     q: "Any electrical work needed?" },
+    { id: "glass",     ctx: ["store", "home"], cat: "Trades",     q: "Glass work — shower doors / enclosures?" },
+    { id: "trimwork",  ctx: ["store", "home"], cat: "Trades",     q: "Trim / carpentry work involved?" },
+    { id: "painting",  ctx: ["store", "home"], cat: "Trades",     q: "Painting before or after install?" },
+
+    // AT-HOME ONLY — these light up when you switch to a home visit
+    { id: "furniture", ctx: ["home"], cat: "In-Home",   q: "Who's moving the furniture — us or them?", hint: "Affects labor & schedule." },
+    { id: "appliances",ctx: ["home"], cat: "In-Home",   q: "Appliances to disconnect / move?" },
+    { id: "subfloor",  ctx: ["home"], cat: "In-Home",   q: "Subfloor condition — squeaks, soft spots, moisture?", hint: "Inspect before quoting." },
+    { id: "removal",   ctx: ["home"], cat: "In-Home",   q: "Existing flooring removal & haul-away?" },
+    { id: "height",    ctx: ["home"], cat: "In-Home",   q: "Floor height / door clearance after new floor?" },
+    { id: "pets",      ctx: ["home"], cat: "In-Home",   q: "Pets or kids in the home during install?" },
+    { id: "access",    ctx: ["home"], cat: "In-Home",   q: "Parking, access, stairs for the crew?" },
+    { id: "measured",  ctx: ["home"], cat: "In-Home",   q: "Confirm measurements on site vs. estimate." },
+  ];
+
+  // ---- Sample project so the app isn't empty on first open ----
+  function sampleData() {
+    const now = Date.now();
+    return {
+      projects: [
+        {
+          id: "p_demo",
+          customerName: "Dana & Mark Whitfield",
+          phone: "(555) 240-1187",
+          email: "whitfields@email.com",
+          address: "418 Cedar Ridge Dr, Maplewood",
+          projectType: "Remodel / renovation",
+          status: "quoting",
+          visitContext: "store",
+          budget: 24000,
+          targetDate: "2026-08-15",
+          notes: "Repeat customer — did their basement in 2023. Wife leads decisions on color.",
+          createdAt: now - 86400000 * 3,
+          updatedAt: now - 86400000,
+          rooms: [
+            {
+              id: "r1", name: "Kitchen",
+              sqft: 240, notes: "Open to dining. Wants wide plank look.",
+              products: [
+                { id: "pr1", cat: "lvp", name: "Coretec Pro — Highlands Oak", color: "Warm honey", status: "selected", note: "7\" plank" },
+                { id: "pr2", cat: "backsplash", name: "Subway 3x6 — Matte White", color: "White", status: "considering", note: "" },
+                { id: "pr3", cat: "grout", name: "Mapei — Pewter", color: "Gray", status: "considering", note: "" },
+              ],
+              answers: { rooms: { val: "yes", note: "Kitchen + dining" }, budget: { val: "yes", note: "$24k all-in" }, plumbing: { val: "yes", note: "Move dishwasher line" } },
+            },
+            {
+              id: "r2", name: "Master Bath",
+              sqft: 90, notes: "Curbless shower conversion.",
+              products: [
+                { id: "pr4", cat: "tile", name: "Marazzi — Travisano 12x24", color: "Bianco", status: "selected", note: "Floor + walls" },
+                { id: "pr5", cat: "shower", name: "Schluter system", color: "—", status: "considering", note: "Linear drain" },
+              ],
+              answers: { glass: { val: "yes", note: "Frameless glass" } },
+            },
+          ],
+          tasks: [
+            { id: "t1", text: "Email Dana the LVP color photos", done: false, due: "2026-06-22" },
+            { id: "t2", text: "Get plumber quote for dishwasher line", done: false, due: "" },
+            { id: "t3", text: "Confirm kitchen square footage on site", done: true, due: "" },
+          ],
+        },
+      ],
+      activeProjectId: "p_demo",
+    };
+  }
+
+  // ---- Persistence ----
+  const KEY = "floorwalk_db_v1";
+  function load() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    const seed = sampleData();
+    save(seed);
+    return seed;
+  }
+  function save(db) {
+    try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {}
+  }
+
+  const DEFAULT_TASKS = [
+    "Upload job site photos",
+    "Measure all rooms",
+    "Customer approves product selections",
+    "Submit estimate to customer",
+    "Follow up #1",
+    "Follow up #2",
+    "Confirm final products",
+    "Get signed contract / authorization",
+    "Collect deposit",
+  ];
+
+  window.FW = {
+    CATEGORIES, PROJECT_TYPES, STATUSES, ROOM_PRESETS, QUESTIONS, DEFAULT_TASKS,
+    load, save, sampleData,
+    uid: (p) => (p || "id") + "_" + Math.random().toString(36).slice(2, 9),
+  };
+})();
+
+</script>
+<script type="text/babel">
+// @ds-adherence-ignore -- omelette starter scaffold (raw elements/hex/px by design)
+
+/* BEGIN USAGE */
+// tweaks-panel.jsx
+// Reusable Tweaks shell + form-control helpers.
+// Exports (to window): useTweaks, TweaksPanel, TweakSection, TweakRow, TweakSlider,
+//   TweakToggle, TweakRadio, TweakSelect, TweakText, TweakNumber, TweakColor, TweakButton.
+//
+// Owns the host protocol (listens for __activate_edit_mode / __deactivate_edit_mode,
+// posts __edit_mode_available / __edit_mode_set_keys / __edit_mode_dismissed) so
+// individual prototypes don't re-roll it. Ships a consistent set of controls so you
+// don't hand-draw <input type="range">, segmented radios, steppers, etc.
+//
+// Usage (in an HTML file that loads React + Babel):
+//
+//   const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+//     "primaryColor": "#D97757",
+//     "palette": ["#D97757", "#29261b", "#f6f4ef"],
+//     "fontSize": 16,
+//     "density": "regular",
+//     "dark": false
+//   }/*EDITMODE-END*/;
+//
+//   function App() {
+//     const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+//     return (
+//       <div style={{ fontSize: t.fontSize, color: t.primaryColor }}>
+//         Hello
+//         <TweaksPanel>
+//           <TweakSection label="Typography" />
+//           <TweakSlider label="Font size" value={t.fontSize} min={10} max={32} unit="px"
+//                        onChange={(v) => setTweak('fontSize', v)} />
+//           <TweakRadio  label="Density" value={t.density}
+//                        options={['compact', 'regular', 'comfy']}
+//                        onChange={(v) => setTweak('density', v)} />
+//           <TweakSection label="Theme" />
+//           <TweakColor  label="Primary" value={t.primaryColor}
+//                        options={['#D97757', '#2A6FDB', '#1F8A5B', '#7A5AE0']}
+//                        onChange={(v) => setTweak('primaryColor', v)} />
+//           <TweakColor  label="Palette" value={t.palette}
+//                        options={[['#D97757', '#29261b', '#f6f4ef'],
+//                                  ['#475569', '#0f172a', '#f1f5f9']]}
+//                        onChange={(v) => setTweak('palette', v)} />
+//           <TweakToggle label="Dark mode" value={t.dark}
+//                        onChange={(v) => setTweak('dark', v)} />
+//         </TweaksPanel>
+//       </div>
+//     );
+//   }
+//
+// TweakRadio is the segmented control for 2–3 short options (auto-falls-back to
+// TweakSelect past ~16/~10 chars per label); reach for TweakSelect directly when
+// options are many or long. For color tweaks always curate 3-4 options rather than
+// a free picker; an option can also be a whole 2–5 color palette (the stored value
+// is the array). The Tweak* controls are a floor, not a ceiling — build custom
+// controls inside the panel if a tweak calls for UI they don't cover.
+/* END USAGE */
+// ─────────────────────────────────────────────────────────────────────────────
+
+const __TWEAKS_STYLE = `
+  .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+    max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+    transform:scale(var(--dc-inv-zoom,1));transform-origin:bottom right;
+    background:rgba(250,249,247,.78);color:#29261b;
+    -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+    border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+    font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+  .twk-hd{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 8px 10px 14px;cursor:move;user-select:none}
+  .twk-hd b{font-size:12px;font-weight:600;letter-spacing:.01em}
+  .twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);
+    width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+  .twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+  .twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;
+    overflow-y:auto;overflow-x:hidden;min-height:0;
+    scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.15) transparent}
+  .twk-body::-webkit-scrollbar{width:8px}
+  .twk-body::-webkit-scrollbar-track{background:transparent;margin:2px}
+  .twk-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:4px;
+    border:2px solid transparent;background-clip:content-box}
+  .twk-body::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.25);
+    border:2px solid transparent;background-clip:content-box}
+  .twk-row{display:flex;flex-direction:column;gap:5px}
+  .twk-row-h{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+  .twk-lbl{display:flex;justify-content:space-between;align-items:baseline;
+    color:rgba(41,38,27,.72)}
+  .twk-lbl>span:first-child{font-weight:500}
+  .twk-val{color:rgba(41,38,27,.5);font-variant-numeric:tabular-nums}
+
+  .twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:rgba(41,38,27,.45);padding:10px 0 0}
+  .twk-sect:first-child{padding-top:0}
+
+  .twk-field{appearance:none;box-sizing:border-box;width:100%;min-width:0;height:26px;padding:0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;
+    background:rgba(255,255,255,.6);color:inherit;font:inherit;outline:none}
+  .twk-field:focus{border-color:rgba(0,0,0,.25);background:rgba(255,255,255,.85)}
+  select.twk-field{padding-right:22px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='rgba(0,0,0,.5)' d='M0 0h10L5 6z'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center}
+
+  .twk-slider{appearance:none;-webkit-appearance:none;width:100%;height:4px;margin:6px 0;
+    border-radius:999px;background:rgba(0,0,0,.12);outline:none}
+  .twk-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:14px;height:14px;border-radius:50%;background:#fff;
+    border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+  .twk-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+    background:#fff;border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+
+  .twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;
+    background:rgba(0,0,0,.06);user-select:none}
+  .twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;
+    background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);
+    transition:left .15s cubic-bezier(.3,.7,.4,1),width .15s}
+  .twk-seg.dragging .twk-seg-thumb{transition:none}
+  .twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;
+    background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;
+    border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2;
+    overflow-wrap:anywhere}
+
+  .twk-toggle{position:relative;width:32px;height:18px;border:0;border-radius:999px;
+    background:rgba(0,0,0,.15);transition:background .15s;cursor:default;padding:0}
+  .twk-toggle[data-on="1"]{background:#34c759}
+  .twk-toggle i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+  .twk-toggle[data-on="1"] i{transform:translateX(14px)}
+
+  .twk-num{display:flex;align-items:center;box-sizing:border-box;min-width:0;height:26px;padding:0 0 0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;background:rgba(255,255,255,.6)}
+  .twk-num-lbl{font-weight:500;color:rgba(41,38,27,.6);cursor:ew-resize;
+    user-select:none;padding-right:8px}
+  .twk-num input{flex:1;min-width:0;height:100%;border:0;background:transparent;
+    font:inherit;font-variant-numeric:tabular-nums;text-align:right;padding:0 8px 0 0;
+    outline:none;color:inherit;-moz-appearance:textfield}
+  .twk-num input::-webkit-inner-spin-button,.twk-num input::-webkit-outer-spin-button{
+    -webkit-appearance:none;margin:0}
+  .twk-num-unit{padding-right:8px;color:rgba(41,38,27,.45)}
+
+  .twk-btn{appearance:none;height:26px;padding:0 12px;border:0;border-radius:7px;
+    background:rgba(0,0,0,.78);color:#fff;font:inherit;font-weight:500;cursor:default}
+  .twk-btn:hover{background:rgba(0,0,0,.88)}
+  .twk-btn.secondary{background:rgba(0,0,0,.06);color:inherit}
+  .twk-btn.secondary:hover{background:rgba(0,0,0,.1)}
+
+  .twk-swatch{appearance:none;-webkit-appearance:none;width:56px;height:22px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:6px;padding:0;cursor:default;
+    background:transparent;flex-shrink:0}
+  .twk-swatch::-webkit-color-swatch-wrapper{padding:0}
+  .twk-swatch::-webkit-color-swatch{border:0;border-radius:5.5px}
+  .twk-swatch::-moz-color-swatch{border:0;border-radius:5.5px}
+
+  .twk-chips{display:flex;gap:6px}
+  .twk-chip{position:relative;appearance:none;flex:1;min-width:0;height:46px;
+    padding:0;border:0;border-radius:6px;overflow:hidden;cursor:default;
+    box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.06);
+    transition:transform .12s cubic-bezier(.3,.7,.4,1),box-shadow .12s}
+  .twk-chip:hover{transform:translateY(-1px);
+    box-shadow:0 0 0 .5px rgba(0,0,0,.18),0 4px 10px rgba(0,0,0,.12)}
+  .twk-chip[data-on="1"]{box-shadow:0 0 0 1.5px rgba(0,0,0,.85),
+    0 2px 6px rgba(0,0,0,.15)}
+  .twk-chip>span{position:absolute;top:0;bottom:0;right:0;width:34%;
+    display:flex;flex-direction:column;box-shadow:-1px 0 0 rgba(0,0,0,.1)}
+  .twk-chip>span>i{flex:1;box-shadow:0 -1px 0 rgba(0,0,0,.1)}
+  .twk-chip>span>i:first-child{box-shadow:none}
+  .twk-chip svg{position:absolute;top:6px;left:6px;width:13px;height:13px;
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+`;
+
+// ── useTweaks ───────────────────────────────────────────────────────────────
+// Single source of truth for tweak values. setTweak persists via the host
+// (__edit_mode_set_keys → host rewrites the EDITMODE block on disk).
+function useTweaks(defaults) {
+  const [values, setValues] = React.useState(defaults);
+  // Accepts either setTweak('key', value) or setTweak({ key: value, ... }) so a
+  // useState-style call doesn't write a "[object Object]" key into the persisted
+  // JSON block.
+  const setTweak = React.useCallback((keyOrEdits, val) => {
+    const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null
+      ? keyOrEdits : { [keyOrEdits]: val };
+    setValues((prev) => ({ ...prev, ...edits }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
+    // Same-window signal so in-page listeners (deck-stage rail thumbnails)
+    // can react — the parent message only reaches the host, not peers.
+    window.dispatchEvent(new CustomEvent('tweakchange', { detail: edits }));
+  }, []);
+  return [values, setTweak];
+}
+
+// ── TweaksPanel ─────────────────────────────────────────────────────────────
+// Floating shell. Registers the protocol listener BEFORE announcing
+// availability — if the announce ran first, the host's activate could land
+// before our handler exists and the toolbar toggle would silently no-op.
+// The close button posts __edit_mode_dismissed so the host's toolbar toggle
+// flips off in lockstep; the host echoes __deactivate_edit_mode back which
+// is what actually hides the panel.
+function TweaksPanel({ title = 'Tweaks', children }) {
+  const [open, setOpen] = React.useState(false);
+  const dragRef = React.useRef(null);
+  const offsetRef = React.useRef({ x: 16, y: 16 });
+  const PAD = 16;
+
+  const clampToViewport = React.useCallback(() => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    const maxRight = Math.max(PAD, window.innerWidth - w - PAD);
+    const maxBottom = Math.max(PAD, window.innerHeight - h - PAD);
+    offsetRef.current = {
+      x: Math.min(maxRight, Math.max(PAD, offsetRef.current.x)),
+      y: Math.min(maxBottom, Math.max(PAD, offsetRef.current.y)),
+    };
+    panel.style.right = offsetRef.current.x + 'px';
+    panel.style.bottom = offsetRef.current.y + 'px';
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    clampToViewport();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', clampToViewport);
+      return () => window.removeEventListener('resize', clampToViewport);
+    }
+    const ro = new ResizeObserver(clampToViewport);
+    ro.observe(document.documentElement);
+    return () => ro.disconnect();
+  }, [open, clampToViewport]);
+
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      const t = e?.data?.type;
+      if (t === '__activate_edit_mode') setOpen(true);
+      else if (t === '__deactivate_edit_mode') setOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const dismiss = () => {
+    setOpen(false);
+    window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*');
+  };
+
+  const onDragStart = (e) => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const r = panel.getBoundingClientRect();
+    const sx = e.clientX, sy = e.clientY;
+    const startRight = window.innerWidth - r.right;
+    const startBottom = window.innerHeight - r.bottom;
+    const move = (ev) => {
+      offsetRef.current = {
+        x: startRight - (ev.clientX - sx),
+        y: startBottom - (ev.clientY - sy),
+      };
+      clampToViewport();
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
+  if (!open) return null;
+  return (
+    <>
+      <style>{__TWEAKS_STYLE}</style>
+      <div ref={dragRef} className="twk-panel" data-omelette-chrome=""
+           style={{ right: offsetRef.current.x, bottom: offsetRef.current.y }}>
+        <div className="twk-hd" onMouseDown={onDragStart}>
+          <b>{title}</b>
+          <button className="twk-x" aria-label="Close tweaks"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={dismiss}>✕</button>
+        </div>
+        <div className="twk-body">
+          {children}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Layout helpers ──────────────────────────────────────────────────────────
+
+function TweakSection({ label, children }) {
+  return (
+    <>
+      <div className="twk-sect">{label}</div>
+      {children}
+    </>
+  );
+}
+
+function TweakRow({ label, value, children, inline = false }) {
+  return (
+    <div className={inline ? 'twk-row twk-row-h' : 'twk-row'}>
+      <div className="twk-lbl">
+        <span>{label}</span>
+        {value != null && <span className="twk-val">{value}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ── Controls ────────────────────────────────────────────────────────────────
+
+function TweakSlider({ label, value, min = 0, max = 100, step = 1, unit = '', onChange }) {
+  return (
+    <TweakRow label={label} value={`${value}${unit}`}>
+      <input type="range" className="twk-slider" min={min} max={max} step={step}
+             value={value} onChange={(e) => onChange(Number(e.target.value))} />
+    </TweakRow>
+  );
+}
+
+function TweakToggle({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <button type="button" className="twk-toggle" data-on={value ? '1' : '0'}
+              role="switch" aria-checked={!!value}
+              onClick={() => onChange(!value)}><i /></button>
+    </div>
+  );
+}
+
+function TweakRadio({ label, value, options, onChange }) {
+  const trackRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+  // The active value is read by pointer-move handlers attached for the lifetime
+  // of a drag — ref it so a stale closure doesn't fire onChange for every move.
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
+
+  // Segments wrap mid-word once per-segment width runs out. The track is
+  // ~248px (280 panel − 28 body pad − 4 seg pad), each button loses 12px
+  // to its own padding, and 11.5px system-ui averages ~6.3px/char — so 2
+  // options fit ~16 chars each, 3 fit ~10. Past that (or >3 options), fall
+  // back to a dropdown rather than wrap.
+  const labelLen = (o) => String(typeof o === 'object' ? o.label : o).length;
+  const maxLen = options.reduce((m, o) => Math.max(m, labelLen(o)), 0);
+  const fitsAsSegments = maxLen <= ({ 2: 16, 3: 10 }[options.length] ?? 0);
+  if (!fitsAsSegments) {
+    // <select> emits strings — map back to the original option value so the
+    // fallback stays type-preserving (numbers, booleans) like the segment path.
+    const resolve = (s) => {
+      const m = options.find((o) => String(typeof o === 'object' ? o.value : o) === s);
+      return m === undefined ? s : typeof m === 'object' ? m.value : m;
+    };
+    return <TweakSelect label={label} value={value} options={options}
+                        onChange={(s) => onChange(resolve(s))} />;
+  }
+  const opts = options.map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
+  const idx = Math.max(0, opts.findIndex((o) => o.value === value));
+  const n = opts.length;
+
+  const segAt = (clientX) => {
+    const r = trackRef.current.getBoundingClientRect();
+    const inner = r.width - 4;
+    const i = Math.floor(((clientX - r.left - 2) / inner) * n);
+    return opts[Math.max(0, Math.min(n - 1, i))].value;
+  };
+
+  const onPointerDown = (e) => {
+    setDragging(true);
+    const v0 = segAt(e.clientX);
+    if (v0 !== valueRef.current) onChange(v0);
+    const move = (ev) => {
+      if (!trackRef.current) return;
+      const v = segAt(ev.clientX);
+      if (v !== valueRef.current) onChange(v);
+    };
+    const up = () => {
+      setDragging(false);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  return (
+    <TweakRow label={label}>
+      <div ref={trackRef} role="radiogroup" onPointerDown={onPointerDown}
+           className={dragging ? 'twk-seg dragging' : 'twk-seg'}>
+        <div className="twk-seg-thumb"
+             style={{ left: `calc(2px + ${idx} * (100% - 4px) / ${n})`,
+                      width: `calc((100% - 4px) / ${n})` }} />
+        {opts.map((o) => (
+          <button key={o.value} type="button" role="radio" aria-checked={o.value === value}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakSelect({ label, value, options, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <select className="twk-field" value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.map((o) => {
+          const v = typeof o === 'object' ? o.value : o;
+          const l = typeof o === 'object' ? o.label : o;
+          return <option key={v} value={v}>{l}</option>;
+        })}
+      </select>
+    </TweakRow>
+  );
+}
+
+function TweakText({ label, value, placeholder, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <input className="twk-field" type="text" value={value} placeholder={placeholder}
+             onChange={(e) => onChange(e.target.value)} />
+    </TweakRow>
+  );
+}
+
+function TweakNumber({ label, value, min, max, step = 1, unit = '', onChange }) {
+  const clamp = (n) => {
+    if (min != null && n < min) return min;
+    if (max != null && n > max) return max;
+    return n;
+  };
+  const startRef = React.useRef({ x: 0, val: 0 });
+  const onScrubStart = (e) => {
+    e.preventDefault();
+    startRef.current = { x: e.clientX, val: value };
+    const decimals = (String(step).split('.')[1] || '').length;
+    const move = (ev) => {
+      const dx = ev.clientX - startRef.current.x;
+      const raw = startRef.current.val + dx * step;
+      const snapped = Math.round(raw / step) * step;
+      onChange(clamp(Number(snapped.toFixed(decimals))));
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  return (
+    <div className="twk-num">
+      <span className="twk-num-lbl" onPointerDown={onScrubStart}>{label}</span>
+      <input type="number" value={value} min={min} max={max} step={step}
+             onChange={(e) => onChange(clamp(Number(e.target.value)))} />
+      {unit && <span className="twk-num-unit">{unit}</span>}
+    </div>
+  );
+}
+
+// Relative-luminance contrast pick — checkmarks drawn over a swatch need to
+// read on both #111 and #fafafa without per-option configuration. Hex input
+// only (#rgb / #rrggbb); named or rgb()/hsl() colors fall through to "light".
+function __twkIsLight(hex) {
+  const h = String(hex).replace('#', '');
+  const x = h.length === 3 ? h.replace(/./g, (c) => c + c) : h.padEnd(6, '0');
+  const n = parseInt(x.slice(0, 6), 16);
+  if (Number.isNaN(n)) return true;
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return r * 299 + g * 587 + b * 114 > 148000;
+}
+
+const __TwkCheck = ({ light }) => (
+  <svg viewBox="0 0 14 14" aria-hidden="true">
+    <path d="M3 7.2 5.8 10 11 4.2" fill="none" strokeWidth="2.2"
+          strokeLinecap="round" strokeLinejoin="round"
+          stroke={light ? 'rgba(0,0,0,.78)' : '#fff'} />
+  </svg>
+);
+
+// TweakColor — curated color/palette picker. Each option is either a single
+// hex string or an array of 1-5 hex strings; the card adapts — a lone color
+// renders solid, a palette renders colors[0] as the hero (left ~2/3) with the
+// rest stacked in a sharp column on the right. onChange emits the
+// option in the shape it was passed (string stays string, array stays array).
+// Without options it falls back to the native color input for back-compat.
+function TweakColor({ label, value, options, onChange }) {
+  if (!options || !options.length) {
+    return (
+      <div className="twk-row twk-row-h">
+        <div className="twk-lbl"><span>{label}</span></div>
+        <input type="color" className="twk-swatch" value={value}
+               onChange={(e) => onChange(e.target.value)} />
+      </div>
+    );
+  }
+  // Native <input type=color> emits lowercase hex per the HTML spec, so
+  // compare case-insensitively. String() guards JSON.stringify(undefined),
+  // which returns the primitive undefined (no .toLowerCase).
+  const key = (o) => String(JSON.stringify(o)).toLowerCase();
+  const cur = key(value);
+  return (
+    <TweakRow label={label}>
+      <div className="twk-chips" role="radiogroup">
+        {options.map((o, i) => {
+          const colors = Array.isArray(o) ? o : [o];
+          const [hero, ...rest] = colors;
+          const sup = rest.slice(0, 4);
+          const on = key(o) === cur;
+          return (
+            <button key={i} type="button" className="twk-chip" role="radio"
+                    aria-checked={on} data-on={on ? '1' : '0'}
+                    aria-label={colors.join(', ')} title={colors.join(' · ')}
+                    style={{ background: hero }}
+                    onClick={() => onChange(o)}>
+              {sup.length > 0 && (
+                <span>
+                  {sup.map((c, j) => <i key={j} style={{ background: c }} />)}
+                </span>
+              )}
+              {on && <__TwkCheck light={__twkIsLight(hero)} />}
+            </button>
+          );
+        })}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakButton({ label, onClick, secondary = false }) {
+  return (
+    <button type="button" className={secondary ? 'twk-btn secondary' : 'twk-btn'}
+            onClick={onClick}>{label}</button>
+  );
+}
+
+Object.assign(window, {
+  useTweaks, TweaksPanel, TweakSection, TweakRow,
+  TweakSlider, TweakToggle, TweakRadio, TweakSelect,
+  TweakText, TweakNumber, TweakColor, TweakButton,
+});
+
+</script>
+<script type="text/babel">
+/* Floorwalk — simple line icons */
+function Icon({ name, size = 20, stroke = 2, ...rest }) {
+  const common = {
+    width: size, height: size, viewBox: "0 0 24 24", fill: "none",
+    stroke: "currentColor", strokeWidth: stroke, strokeLinecap: "round",
+    strokeLinejoin: "round", ...rest,
+  };
+  const P = {
+    back:      <polyline points="15 18 9 12 15 6" />,
+    chevron:   <polyline points="9 6 15 12 9 18" />,
+    chevdown:  <polyline points="6 9 12 15 18 9" />,
+    plus:      <g><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></g>,
+    check:     <polyline points="20 6 9 17 4 12" />,
+    x:         <g><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></g>,
+    home:      <g><path d="M3 11l9-8 9 8" /><path d="M5 10v10h14V10" /></g>,
+    store:     <g><path d="M3 9l1.5-5h15L21 9" /><path d="M4 9v11h16V9" /><path d="M4 9a2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0" /></g>,
+    rooms:     <g><rect x="3" y="3" width="8" height="8" rx="1.5" /><rect x="13" y="3" width="8" height="8" rx="1.5" /><rect x="3" y="13" width="8" height="8" rx="1.5" /><rect x="13" y="13" width="8" height="8" rx="1.5" /></g>,
+    question:  <g><circle cx="12" cy="12" r="9" /><path d="M9.2 9a2.8 2.8 0 0 1 5.4 1c0 2-2.6 2.4-2.6 4" /><line x1="12" y1="17.5" x2="12" y2="17.5" /></g>,
+    money:     <g><circle cx="12" cy="12" r="9" /><path d="M14.5 9a2.5 2.5 0 0 0-2.5-1.5c-1.4 0-2.5.8-2.5 2s1 1.6 2.5 2 2.5 1 2.5 2.2S13.4 17 12 17a2.7 2.7 0 0 1-2.6-1.6" /><line x1="12" y1="6" x2="12" y2="7.5" /><line x1="12" y1="16.5" x2="12" y2="18" /></g>,
+    tasks:     <g><path d="M9 11l2 2 4-4" /><rect x="3" y="4" width="18" height="16" rx="2" /></g>,
+    user:      <g><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.5-6 8-6s8 2 8 6" /></g>,
+    phone:     <path d="M5 4h3l1.5 4-2 1.5a11 11 0 0 0 5 5l1.5-2 4 1.5V18a2 2 0 0 1-2 2A14 14 0 0 1 4 6a2 2 0 0 1 1-2z" />,
+    mail:      <g><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></g>,
+    pin:       <g><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z" /><circle cx="12" cy="10" r="2.5" /></g>,
+    calendar:  <g><rect x="3" y="5" width="18" height="16" rx="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="8" y1="3" x2="8" y2="6" /><line x1="16" y1="3" x2="16" y2="6" /></g>,
+    ruler:     <g><rect x="2" y="8" width="20" height="8" rx="1.5" transform="rotate(0 12 12)" /><line x1="7" y1="8" x2="7" y2="12" /><line x1="11" y1="8" x2="11" y2="11" /><line x1="15" y1="8" x2="15" y2="12" /><line x1="19" y1="8" x2="19" y2="11" /></g>,
+    flag:      <g><line x1="5" y1="21" x2="5" y2="4" /><path d="M5 4h11l-2 4 2 4H5" /></g>,
+    note:      <g><path d="M4 4h16v12l-4 4H4z" /><path d="M20 16h-4v4" /></g>,
+    sheet:     <g><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /><line x1="9" y1="9" x2="9" y2="21" /></g>,
+    share:     <g><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" /><polyline points="8 7 12 3 16 7" /><line x1="12" y1="3" x2="12" y2="15" /></g>,
+    search:    <g><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.5" y2="16.5" /></g>,
+    trash:     <g><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></g>,
+    edit:      <g><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></g>,
+    dots:      <g><circle cx="5" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="19" cy="12" r="1.6" /></g>,
+    sun:       <g><circle cx="12" cy="12" r="4" /><line x1="12" y1="2" x2="12" y2="5" /><line x1="12" y1="19" x2="12" y2="22" /><line x1="2" y1="12" x2="5" y2="12" /><line x1="19" y1="12" x2="22" y2="12" /><line x1="5" y1="5" x2="7" y2="7" /><line x1="17" y1="17" x2="19" y2="19" /><line x1="5" y1="19" x2="7" y2="17" /><line x1="17" y1="7" x2="19" y2="5" /></g>,
+    camera:    <g><path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L19 6h0a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><circle cx="12" cy="13" r="3.5" /></g>,
+    box:       <g><path d="M3 7l9-4 9 4v10l-9 4-9-4z" /><path d="M3 7l9 4 9-4M12 11v10" /></g>,
+    bolt:      <polygon points="13 2 4 14 11 14 10 22 20 9 13 9 13 2" />,
+    drop:      <path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z" />,
+  };
+  return <svg {...common}>{P[name] || P.box}</svg>;
+}
+Object.assign(window, { Icon });
+
+</script>
+<script type="text/babel">
+/* Floorwalk — shared UI (Sheet, Field) + Project list + New project */
+const { useState, useEffect, useRef } = React;
+
+/* ---------- Reusable bottom sheet / modal ---------- */
+function Sheet({ title, onClose, children, foot }) {
+  useEffect(() => {
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
+  return (
+    <div className="scrim" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="sheet" role="dialog" aria-modal="true">
+        <div className="sheet-grab" />
+        <div className="sheet-head">
+          <button className="btn sm" style={{ padding: "8px 13px 8px 9px" }} onClick={onClose} aria-label="Back"><Icon name="back" size={17} />Back</button>
+          <h2 className="xb" style={{ fontSize: 18, margin: 0, flex: 1, textAlign: "center" }}>{title}</h2>
+          <button className="iconbtn ghost" onClick={onClose} aria-label="Close"><Icon name="x" /></button>
+        </div>
+        <div className="pad">{children}</div>
+        {foot && <div className="pad" style={{ paddingTop: 0, position: "sticky", bottom: 0, background: "var(--surface)" }}>{foot}</div>}
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return <div className="field"><label>{label}</label>{children}</div>;
+}
+
+function fmtDate(d) {
+  if (!d) return "";
+  try { return new Date(d + "T00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }); }
+  catch (e) { return d; }
+}
+function relTime(ts) {
+  const diff = Date.now() - ts, day = 86400000;
+  if (diff < 3600000) return "just now";
+  if (diff < day) return Math.round(diff / 3600000) + "h ago";
+  if (diff < day * 7) return Math.round(diff / day) + "d ago";
+  return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+function money(n) { return "$" + (Number(n) || 0).toLocaleString(); }
+
+/* ---------- Project list ---------- */
+function ProjectList({ db, actions }) {
+  const [q, setQ] = useState("");
+  const [adding, setAdding] = useState(false);
+  const list = db.projects
+    .filter(p => (p.customerName + " " + p.address + " " + p.projectType).toLowerCase().includes(q.toLowerCase()))
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+
+  return (
+    <div className="screen">
+      <div className="topbar">
+        <div className="brandmark"><span /></div>
+        <div className="grow">
+          <h1 style={{ fontSize: 20 }}>Floorwalk</h1>
+          <div className="sub">{db.projects.length} project{db.projects.length !== 1 ? "s" : ""}</div>
+        </div>
+        <button className="iconbtn" onClick={() => window.__fwToggleDark && window.__fwToggleDark()} aria-label="Toggle dark mode"><Icon name="sun" /></button>
+      </div>
+
+      <div className="pad" style={{ paddingBottom: 6 }}>
+        <div className="row" style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", padding: "0 13px" }}>
+          <Icon name="search" size={18} style={{ color: "var(--muted)", flex: "none" }} />
+          <input className="input" style={{ border: "none", padding: "12px 8px", background: "transparent" }}
+            placeholder="Search customers, addresses…" value={q} onChange={e => setQ(e.target.value)} />
+        </div>
+      </div>
+
+      <div className="pad" style={{ paddingTop: 8, display: "flex", flexDirection: "column", gap: 11 }}>
+        {list.length === 0 && (
+          <div className="empty">
+            <div className="ic"><Icon name="store" size={28} /></div>
+            <div className="b lg" style={{ color: "var(--ink)" }}>{q ? "No matches" : "No projects yet"}</div>
+            <div className="sm" style={{ marginTop: 4 }}>{q ? "Try a different search." : "Tap + to start a customer walkthrough."}</div>
+          </div>
+        )}
+        {list.map(p => <ProjectCard key={p.id} p={p} onOpen={() => actions.open(p.id)} onDelete={actions.deleteProject} />)}
+      </div>
+
+      <button className="fab" onClick={() => setAdding(true)} aria-label="New project"><Icon name="plus" size={26} /></button>
+
+      {adding && <NewProjectSheet onClose={() => setAdding(false)} onCreate={(proj) => { actions.addProject(proj); setAdding(false); actions.open(proj.id); }} />}
+    </div>
+  );
+}
+
+function ProjectCard({ p, onOpen, onDelete }) {
+  const st = window.FW.STATUSES.find(s => s.id === p.status) || { label: p.status };
+  const sel = p.rooms.reduce((n, r) => n + r.products.filter(x => x.status === "selected").length, 0);
+  const openTasks = p.tasks.filter(t => !t.done).length;
+  const [offset, setOffset] = useState(0);
+  const [swiped, setSwiped] = useState(false);
+  const startX = useRef(null);
+  const DELETE_THRESHOLD = 80;
+
+  const onTouchStart = (e) => { startX.current = e.touches[0].clientX; };
+  const onTouchMove = (e) => {
+    if (startX.current === null) return;
+    const dx = startX.current - e.touches[0].clientX;
+    if (dx > 0) setOffset(Math.min(dx, DELETE_THRESHOLD));
+  };
+  const onTouchEnd = () => {
+    if (offset >= DELETE_THRESHOLD) { setSwiped(true); }
+    else { setOffset(0); }
+    startX.current = null;
+  };
+
+  return (
+    <div style={{ position: "relative", borderRadius: "var(--radius)", overflow: "hidden" }}>
+      {/* Delete button revealed behind */}
+      <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: DELETE_THRESHOLD,
+        background: "var(--danger)", display: "flex", alignItems: "center", justifyContent: "center",
+        borderRadius: "var(--radius)", cursor: "pointer" }}
+        onClick={() => { if (confirm("Delete " + p.customerName + "?")) onDelete(p.id); setSwiped(false); setOffset(0); }}>
+        <div style={{ color: "#fff", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+          <Icon name="trash" size={20} />
+          <span style={{ fontSize: 11, fontWeight: 800 }}>Delete</span>
+        </div>
+      </div>
+      {/* Card slides left to reveal delete */}
+      <button className="card" onClick={() => { if (swiped || offset > 10) { setOffset(0); setSwiped(false); } else { onOpen(); } }}
+        onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+        style={{ textAlign: "left", cursor: "pointer", padding: 16, font: "inherit", color: "inherit",
+          display: "block", width: "100%", position: "relative", zIndex: 1,
+          transform: `translateX(-${swiped ? DELETE_THRESHOLD : offset}px)`,
+          transition: startX.current === null ? "transform .25s ease" : "none" }}>
+        <div className="spread" style={{ alignItems: "flex-start" }}>
+          <div className="grow">
+            <div className="xb" style={{ fontSize: 17 }}>{p.customerName}</div>
+            <div className="sm muted" style={{ marginTop: 2, display: "flex", alignItems: "center", gap: 5 }}>
+              <Icon name="pin" size={13} /> {p.address || "No address yet"}
+            </div>
+          </div>
+          <span className={"pill " + p.status}><span className="dot" />{st.label}</span>
+        </div>
+        <div className="row" style={{ marginTop: 13, gap: 8, flexWrap: "wrap" }}>
+          <span className="pill" style={{ background: "var(--surface-3)" }}>{p.projectType}</span>
+          <span className="pill" style={{ background: "var(--surface-3)" }}><Icon name="rooms" size={13} />{p.rooms.length} room{p.rooms.length !== 1 ? "s" : ""}</span>
+          {sel > 0 && <span className="pill" style={{ background: "var(--surface-3)" }}><Icon name="check" size={13} />{sel} picked</span>}
+          {openTasks > 0 && <span className="pill quoting"><Icon name="tasks" size={13} />{openTasks} to-do</span>}
+        </div>
+        <div className="divider" style={{ margin: "13px 0 10px" }} />
+        <div className="spread">
+          <span className="tiny muted">Updated {relTime(p.updatedAt)}</span>
+          <span className="tiny b" style={{ color: "var(--accent)", display: "flex", alignItems: "center", gap: 3 }}>Open<Icon name="chevron" size={14} /></span>
+        </div>
+      </button>
+    </div>
+  );
+}
+
+/* ---------- New project ---------- */
+function NewProjectSheet({ onClose, onCreate }) {
+  const [f, setF] = useState({ customerName: "", phone: "", email: "", address: "", projectType: window.FW.PROJECT_TYPES[0], visitContext: "store" });
+  const set = (k, v) => setF(s => ({ ...s, [k]: v }));
+  const valid = f.customerName.trim().length > 0;
+  function create() {
+    if (!valid) return;
+    const now = Date.now();
+    const defaultTasks = window.FW.DEFAULT_TASKS.map((text, i) => ({ id: window.FW.uid("t"), text, done: false, due: "" }));
+    onCreate({ id: window.FW.uid("p"), ...f, status: "lead", budget: 0, targetDate: "", notes: "", createdAt: now, updatedAt: now, rooms: [], tasks: defaultTasks });
+  }
+  return (
+    <Sheet title="New project" onClose={onClose}
+      foot={<button className="btn primary block" disabled={!valid} style={{ opacity: valid ? 1 : .5 }} onClick={create}>Start walkthrough</button>}>
+      <Field label="Customer name *"><input className="input" autoFocus placeholder="e.g. Dana & Mark Whitfield" value={f.customerName} onChange={e => set("customerName", e.target.value)} /></Field>
+      <div className="row" style={{ gap: 10, alignItems: "stretch" }}>
+        <div style={{ flex: 1 }}><Field label="Phone"><input className="input" type="tel" placeholder="(555) 000-0000" value={f.phone} onChange={e => set("phone", e.target.value)} /></Field></div>
+      </div>
+      <Field label="Email"><input className="input" type="email" placeholder="name@email.com" value={f.email} onChange={e => set("email", e.target.value)} /></Field>
+      <Field label="Address / job site"><input className="input" placeholder="Street, city" value={f.address} onChange={e => set("address", e.target.value)} /></Field>
+      <Field label="Project type">
+        <select className="input" value={f.projectType} onChange={e => set("projectType", e.target.value)}>
+          {window.FW.PROJECT_TYPES.map(t => <option key={t}>{t}</option>)}
+        </select>
+      </Field>
+      <Field label="Where are you meeting?">
+        <div className="seg full">
+          <button className={f.visitContext === "store" ? "on" : ""} onClick={() => set("visitContext", "store")}><Icon name="store" size={16} />In store</button>
+          <button className={f.visitContext === "home" ? "on" : ""} onClick={() => set("visitContext", "home")}><Icon name="home" size={16} />At home</button>
+        </div>
+      </Field>
+    </Sheet>
+  );
+}
+
+Object.assign(window, { Sheet, Field, fmtDate, relTime, money, ProjectList });
+
+</script>
+<script type="text/babel">
+/* Floorwalk — in-app photo capture (compress + store + gallery + lightbox) */
+
+// Downscale + compress a captured file to a JPEG data URL so localStorage survives.
+async function fileToThumb(file, max = 1000, q = 0.62) {
+  let bmp;
+  try { bmp = await createImageBitmap(file, { imageOrientation: "from-image" }); }
+  catch (e) {
+    bmp = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); });
+  }
+  let w = bmp.width, h = bmp.height;
+  const s = Math.min(1, max / Math.max(w, h));
+  w = Math.round(w * s); h = Math.round(h * s);
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  c.getContext("2d").drawImage(bmp, 0, 0, w, h);
+  if (bmp.close) bmp.close();
+  return c.toDataURL("image/jpeg", q);
+}
+
+// Open the device camera / file picker and return a photo object.
+function pickPhoto(onPick) {
+  const input = document.createElement("input");
+  input.type = "file"; input.accept = "image/*"; input.setAttribute("capture", "environment");
+  input.onchange = async () => {
+    const f = input.files && input.files[0];
+    if (!f) return;
+    try { const src = await fileToThumb(f); onPick({ id: window.FW.uid("ph"), src, ts: Date.now() }); }
+    catch (e) { alert("Couldn't read that image."); }
+  };
+  input.click();
+}
+
+// Full-screen viewer
+function Lightbox({ photo, onClose, onRemove, caption }) {
+  useEffect(() => {
+    const h = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
+  }, []);
+  return (
+    <div className="lightbox" onClick={onClose}>
+      <div className="lb-bar" onClick={e => e.stopPropagation()}>
+        <button className="btn sm" style={{ padding: "8px 13px 8px 9px", background: "rgba(255,255,255,.12)", color: "#fff", borderColor: "rgba(255,255,255,.25)" }} onClick={onClose}><Icon name="back" size={17} />Back</button>
+        <span className="sm b" style={{ color: "#fff", flex: 1, textAlign: "center" }}>{caption || "Photo"}</span>
+        {onRemove && <button className="iconbtn ghost" style={{ color: "#fff" }} onClick={() => { if (confirm("Delete this photo?")) onRemove(); }} aria-label="Delete"><Icon name="trash" /></button>}
+      </div>
+      <img src={photo.src} className="lb-img" onClick={e => e.stopPropagation()} alt="" />
+    </div>
+  );
+}
+
+// Thumbnail grid + add tile
+function PhotoStrip({ photos = [], onAdd, onRemove, hint, addLabel = "Add" }) {
+  const [view, setView] = useState(null);
+  return (
+    <div>
+      <div className="photogrid">
+        {photos.map(p => (
+          <button key={p.id} className="thumb" style={{ backgroundImage: `url(${p.src})` }} onClick={() => setView(p)} aria-label="View photo" />
+        ))}
+        {onAdd && (
+          <button className="thumb add" onClick={() => pickPhoto(onAdd)}>
+            <Icon name="camera" size={22} /><span>{addLabel}</span>
+          </button>
+        )}
+      </div>
+      {hint && photos.length === 0 && <div className="tiny muted" style={{ marginTop: 8 }}>{hint}</div>}
+      {view && <Lightbox photo={view} onClose={() => setView(null)}
+        onRemove={onRemove ? () => { onRemove(view.id); setView(null); } : null} />}
+    </div>
+  );
+}
+
+// Compact camera button (one-tap capture) with a count badge — for product rows / top bars
+function CameraButton({ count = 0, onAdd, ghost }) {
+  return (
+    <button className={"iconbtn" + (ghost ? " ghost" : "")} style={{ position: "relative" }} onClick={() => pickPhoto(onAdd)} aria-label="Take photo">
+      <Icon name="camera" />
+      {count > 0 && <span style={{ position: "absolute", top: -6, right: -6, background: "var(--accent)", color: "var(--accent-ink)", fontSize: 10, fontWeight: 800, minWidth: 16, height: 16, borderRadius: 8, display: "grid", placeItems: "center", padding: "0 4px" }}>{count}</span>}
+    </button>
+  );
+}
+
+/* ---------- Project-wide photo gallery ---------- */
+function ProjectPhotosSheet({ p, mutate, onClose }) {
+  const general = p.photos || [];
+  const addGeneral = (ph) => mutate(p.id, d => { d.photos = d.photos || []; d.photos.push(ph); });
+  const removeAny = (id) => mutate(p.id, d => {
+    d.photos = (d.photos || []).filter(x => x.id !== id);
+    d.rooms.forEach(r => { r.photos = (r.photos || []).filter(x => x.id !== id); r.products.forEach(pr => { pr.photos = (pr.photos || []).filter(x => x.id !== id); }); });
+  });
+  const [view, setView] = useState(null);
+
+  const roomBlocks = p.rooms.map(r => {
+    const prodPhotos = r.products.flatMap(pr => (pr.photos || []).map(ph => ({ ...ph, cap: r.name + " · " + (pr.name || "product") })));
+    const roomPhotos = (r.photos || []).map(ph => ({ ...ph, cap: r.name }));
+    return { room: r, photos: [...roomPhotos, ...prodPhotos] };
+  }).filter(b => b.photos.length);
+
+  const totalRoom = roomBlocks.reduce((n, b) => n + b.photos.length, 0);
+
+  return (
+    <Sheet title={`Photos (${general.length + totalRoom})`} onClose={onClose}>
+      <div className="section-title">General job-site photos</div>
+      <PhotoStrip photos={general} onAdd={addGeneral} onRemove={removeAny} addLabel="Camera"
+        hint="House exterior, existing floors, anything you want on file." />
+
+      {roomBlocks.map(b => (
+        <div key={b.room.id} style={{ marginTop: 18 }}>
+          <div className="section-title">{b.room.name}</div>
+          <div className="photogrid">
+            {b.photos.map(ph => <button key={ph.id} className="thumb" style={{ backgroundImage: `url(${ph.src})` }} onClick={() => setView(ph)} aria-label="View" />)}
+          </div>
+        </div>
+      ))}
+
+      {general.length + totalRoom === 0 && (
+        <div className="empty" style={{ padding: "28px 0 8px" }}>
+          <div className="sm">Photos you take in rooms and on product selections collect here too.</div>
+        </div>
+      )}
+      {view && <Lightbox photo={view} caption={view.cap} onClose={() => setView(null)} onRemove={() => { removeAny(view.id); setView(null); }} />}
+    </Sheet>
+  );
+}
+
+function countPhotos(p) {
+  let n = (p.photos || []).length;
+  p.rooms.forEach(r => { n += (r.photos || []).length; r.products.forEach(pr => { n += (pr.photos || []).length; }); });
+  return n;
+}
+
+Object.assign(window, { PhotoStrip, CameraButton, ProjectPhotosSheet, pickPhoto, countPhotos });
+
+</script>
+<script type="text/babel">
+/* Floorwalk — Rooms tab + Room editor (product checklist by category) */
+function RoomsTab({ p, mutate, ctx }) {
+  const [openId, setOpenId] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const room = p.rooms.find(r => r.id === openId);
+
+  function addRoom(name) {
+    const r = { id: window.FW.uid("r"), name, sqft: "", notes: "", products: [], answers: {} };
+    mutate(p.id, d => { d.rooms.push(r); });
+    setAdding(false); setOpenId(r.id);
+  }
+
+  return (
+    <div className="pad">
+      <div className="spread" style={{ marginBottom: 12 }}>
+        <div className="section-title" style={{ margin: 0 }}>Rooms & areas</div>
+        <button className="btn sm" onClick={() => setAdding(true)}><Icon name="plus" size={16} />Add room</button>
+      </div>
+
+      {p.rooms.length === 0 && (
+        <div className="empty card flat" style={{ background: "var(--surface-2)" }}>
+          <div className="ic"><Icon name="rooms" size={26} /></div>
+          <div className="b" style={{ color: "var(--ink)" }}>No rooms added</div>
+          <div className="sm" style={{ marginTop: 4 }}>Add each room you'll be quoting.</div>
+        </div>
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {p.rooms.map(r => {
+          const sel = r.products.filter(x => x.status === "selected").length;
+          const con = r.products.filter(x => x.status === "considering").length;
+          return (
+            <button key={r.id} className="card" onClick={() => setOpenId(r.id)}
+              style={{ textAlign: "left", padding: 15, cursor: "pointer", font: "inherit", color: "inherit", width: "100%" }}>
+              <div className="spread">
+                <div className="grow">
+                  <div className="xb" style={{ fontSize: 16 }}>{r.name}</div>
+                  <div className="sm muted" style={{ marginTop: 2 }}>{r.sqft ? r.sqft + " sq ft" : "No measurement"}{r.notes ? " · " + r.notes.slice(0, 38) : ""}</div>
+                </div>
+                <Icon name="chevron" size={18} style={{ color: "var(--muted)" }} />
+              </div>
+              {(sel > 0 || con > 0) && (
+                <div className="row" style={{ marginTop: 11, gap: 7, flexWrap: "wrap" }}>
+                  {sel > 0 && <span className="status-tag selected">{sel} selected</span>}
+                  {con > 0 && <span className="status-tag considering">{con} considering</span>}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {adding && <AddRoomSheet onClose={() => setAdding(false)} onAdd={addRoom} existing={p.rooms.map(r => r.name)} />}
+      {room && <RoomEditor p={p} room={room} mutate={mutate} onClose={() => setOpenId(null)} ctx={ctx} />}
+    </div>
+  );
+}
+
+function AddRoomSheet({ onClose, onAdd, existing }) {
+  const [custom, setCustom] = useState("");
+  const avail = window.FW.ROOM_PRESETS;
+  return (
+    <Sheet title="Add a room" onClose={onClose}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginBottom: 14 }}>
+        {avail.map(name => (
+          <button key={name} className="btn" style={{ justifyContent: "flex-start", fontWeight: 600 }} onClick={() => onAdd(name)}>
+            <Icon name="rooms" size={15} style={{ color: "var(--accent)" }} />{name}
+          </button>
+        ))}
+      </div>
+      <Field label="Or type a custom name">
+        <div className="row" style={{ gap: 8 }}>
+          <input className="input" placeholder="e.g. Sunroom" value={custom} onChange={e => setCustom(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && custom.trim()) onAdd(custom.trim()); }} />
+          <button className="btn primary" disabled={!custom.trim()} style={{ opacity: custom.trim() ? 1 : .5 }} onClick={() => custom.trim() && onAdd(custom.trim())}>Add</button>
+        </div>
+      </Field>
+    </Sheet>
+  );
+}
+
+/* ---------- Room editor ---------- */
+function RoomEditor({ p, room, mutate, onClose }) {
+  const [addCat, setAddCat] = useState(null); // category id being added
+  const upd = (fn) => mutate(p.id, d => { const r = d.rooms.find(x => x.id === room.id); fn(r); });
+
+  function addProduct(catId, data) {
+    upd(r => r.products.push({ id: window.FW.uid("pr"), cat: catId, ...data }));
+    setAddCat(null);
+  }
+  const groups = window.FW.CATEGORIES;
+  const byCat = {};
+  room.products.forEach(pr => { (byCat[pr.cat] = byCat[pr.cat] || []).push(pr); });
+  const usedCats = groups.filter(c => byCat[c.id]);
+
+  return (
+    <Sheet title={room.name} onClose={onClose}
+      foot={
+        <button className="btn block" style={{ color: "var(--danger)", borderColor: "var(--line)" }}
+          onClick={() => { if (confirm("Delete this room?")) { mutate(p.id, d => { d.rooms = d.rooms.filter(x => x.id !== room.id); }); onClose(); } }}>
+          <Icon name="trash" size={16} />Delete room
+        </button>
+      }>
+      <div className="row" style={{ gap: 10, marginBottom: 16 }}>
+        <div style={{ width: 120 }}>
+          <Field label="Measurement"><div className="row" style={{ gap: 6 }}>
+            <input className="input" type="number" inputMode="decimal" placeholder="0" value={room.sqft} onChange={e => upd(r => r.sqft = e.target.value)} />
+            <span className="sm muted b">ft²</span>
+          </div></Field>
+        </div>
+        <div className="grow">
+          <Field label="Room note"><input className="input" placeholder="e.g. open to dining" value={room.notes} onChange={e => upd(r => r.notes = e.target.value)} /></Field>
+        </div>
+      </div>
+
+      <div className="section-title">In-home & room photos</div>
+      <div style={{ marginBottom: 18 }}>
+        <PhotoStrip photos={room.photos || []} addLabel="Camera"
+          onAdd={ph => upd(r => { r.photos = r.photos || []; r.photos.push(ph); })}
+          onRemove={id => upd(r => { r.photos = (r.photos || []).filter(x => x.id !== id); })}
+          hint="Snap the space, subfloor, transitions, problem areas — saved with this room." />
+      </div>
+
+      <div className="section-title">Product selections</div>
+      {room.products.length === 0 && <div className="sm muted" style={{ marginBottom: 12 }}>Nothing added yet — pick a category below.</div>}
+
+      {usedCats.map(c => (
+        <div key={c.id} style={{ marginBottom: 12 }}>
+          <div className="eyebrow" style={{ marginBottom: 7 }}>{c.label}</div>
+          {byCat[c.id].map(pr => <ProductRow key={pr.id} pr={pr} upd={upd} />)}
+        </div>
+      ))}
+
+      {addCat ? (
+        <AddProductForm cat={groups.find(c => c.id === addCat)} onCancel={() => setAddCat(null)} onSave={(data) => addProduct(addCat, data)} />
+      ) : (
+        <div style={{ marginTop: 8 }}>
+          <div className="eyebrow" style={{ marginBottom: 8 }}>Add selection</div>
+          <div className="row" style={{ gap: 7, flexWrap: "wrap" }}>
+            {groups.map(c => (
+              <button key={c.id} className="pill" style={{ cursor: "pointer", background: "var(--surface)", padding: "7px 12px" }} onClick={() => setAddCat(c.id)}>
+                <Icon name="plus" size={13} />{c.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </Sheet>
+  );
+}
+
+function ProductRow({ pr, upd }) {
+  const [open, setOpen] = useState(false);
+  const cycle = () => upd(r => { const x = r.products.find(q => q.id === pr.id); x.status = x.status === "selected" ? "considering" : "selected"; });
+  const addPhoto = (ph) => upd(r => { const x = r.products.find(q => q.id === pr.id); x.photos = x.photos || []; x.photos.push(ph); });
+  const removePhoto = (id) => upd(r => { const x = r.products.find(q => q.id === pr.id); x.photos = (x.photos || []).filter(y => y.id !== id); });
+  const photos = pr.photos || [];
+  return (
+    <div className="prodcard">
+      <div className="row" style={{ gap: 10, alignItems: "flex-start" }}>
+        <div className="swatch" style={photos[0] ? { backgroundImage: `url(${photos[0].src})`, backgroundSize: "cover", backgroundPosition: "center" } : null} />
+        <div className="grow" onClick={() => setOpen(o => !o)} style={{ cursor: "pointer" }}>
+          <div className="b" style={{ fontSize: 15 }}>{pr.name || "Unnamed"}</div>
+          <div className="sm muted">{[pr.color, pr.note].filter(Boolean).join(" · ") || "Tap to edit"}</div>
+        </div>
+        <CameraButton count={photos.length} onAdd={addPhoto} ghost />
+        <button className={"status-tag " + pr.status} style={{ cursor: "pointer", border: "none" }} onClick={cycle}>{pr.status}</button>
+      </div>
+      {photos.length > 0 && (
+        <div style={{ marginTop: 11 }}>
+          <PhotoStrip photos={photos} onAdd={addPhoto} onRemove={removePhoto} addLabel="Add" />
+        </div>
+      )}
+      {open && (
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--line)" }}>
+          <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+            <input className="input" placeholder="Product / SKU" value={pr.name} onChange={e => upd(r => r.products.find(q => q.id === pr.id).name = e.target.value)} />
+          </div>
+          <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+            <input className="input" placeholder="Color" value={pr.color} onChange={e => upd(r => r.products.find(q => q.id === pr.id).color = e.target.value)} />
+            <input className="input" placeholder="Note (size, qty…)" value={pr.note} onChange={e => upd(r => r.products.find(q => q.id === pr.id).note = e.target.value)} />
+          </div>
+          <button className="linkbtn sm" style={{ color: "var(--danger)" }} onClick={() => upd(r => r.products = r.products.filter(q => q.id !== pr.id))}>Remove</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AddProductForm({ cat, onCancel, onSave }) {
+  const [d, setD] = useState({ name: "", color: "", note: "", status: "considering" });
+  const set = (k, v) => setD(s => ({ ...s, [k]: v }));
+  return (
+    <div className="card" style={{ padding: 14, marginTop: 8, background: "var(--surface-2)" }}>
+      <div className="spread" style={{ marginBottom: 10 }}>
+        <div className="b">{cat.label}</div>
+        <button className="iconbtn ghost" onClick={onCancel}><Icon name="x" size={18} /></button>
+      </div>
+      <input className="input" autoFocus placeholder="Product / SKU name" value={d.name} onChange={e => set("name", e.target.value)} style={{ marginBottom: 8 }} />
+      <div className="row" style={{ gap: 8, marginBottom: 10 }}>
+        <input className="input" placeholder="Color" value={d.color} onChange={e => set("color", e.target.value)} />
+        <input className="input" placeholder="Note" value={d.note} onChange={e => set("note", e.target.value)} />
+      </div>
+      <div className="spread">
+        <div className="seg">
+          <button className={d.status === "considering" ? "on" : ""} onClick={() => set("status", "considering")}>Considering</button>
+          <button className={d.status === "selected" ? "on" : ""} onClick={() => set("status", "selected")}>Selected</button>
+        </div>
+        <button className="btn primary sm" onClick={() => onSave(d)}><Icon name="check" size={15} />Add</button>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { RoomsTab });
+
+</script>
+<script type="text/babel">
+/* Floorwalk — Questions tab (context-aware reminders) */
+function QuestionsTab({ p, mutate, ctx }) {
+  const all = window.FW.QUESTIONS;
+  const active = all.filter(q => q.ctx.includes(ctx));
+  const homeOnly = all.filter(q => !q.ctx.includes("store")); // light up at the home visit
+  const answers = p.answers || {};
+
+  // group active questions by category, preserving order
+  const cats = [];
+  active.forEach(q => { if (!cats.includes(q.cat)) cats.push(q.cat); });
+
+  const setAns = (qid, patch) => mutate(p.id, d => { d.answers = d.answers || {}; d.answers[qid] = { ...(d.answers[qid] || {}), ...patch }; });
+  const cycle = (qid) => {
+    const order = [undefined, "yes", "no", "flag"];
+    const cur = (answers[qid] || {}).val;
+    const next = order[(order.indexOf(cur) + 1) % order.length];
+    setAns(qid, { val: next });
+  };
+  const addTask = (text) => mutate(p.id, d => d.tasks.push({ id: window.FW.uid("t"), text, done: false, due: "" }));
+
+  const unanswered = active.filter(q => !(answers[q.id] || {}).val).length;
+
+  return (
+    <div className="pad">
+      {/* context banner */}
+      <div className="card" style={{ padding: 14, marginBottom: 14, background: ctx === "home" ? "var(--accent-soft)" : "var(--surface-2)", borderColor: ctx === "home" ? "var(--accent)" : "var(--line)" }}>
+        <div className="row" style={{ gap: 11 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: "var(--surface)", display: "grid", placeItems: "center", color: "var(--accent)", flex: "none" }}>
+            <Icon name={ctx === "home" ? "home" : "store"} size={20} />
+          </div>
+          <div className="grow">
+            <div className="b">{ctx === "home" ? "At-home visit" : "In-store visit"}</div>
+            <div className="sm muted">{ctx === "home"
+              ? "On-site questions are highlighted — confirm conditions now."
+              : "Discovery & selection questions. In-home items wait for the visit."}</div>
+          </div>
+          <div style={{ textAlign: "right", flex: "none" }}>
+            <div className="xb" style={{ fontSize: 22, color: unanswered ? "var(--accent)" : "var(--good)" }}>{unanswered}</div>
+            <div className="tiny muted b">left</div>
+          </div>
+        </div>
+      </div>
+
+      {cats.map(cat => {
+        const qs = active.filter(q => q.cat === cat);
+        const isHomeCat = cat === "In-Home";
+        return (
+          <div key={cat} style={{ marginBottom: 18 }}>
+            <div className="spread" style={{ marginBottom: 9 }}>
+              <div className="section-title" style={{ margin: 0, color: isHomeCat && ctx === "home" ? "var(--accent)" : "var(--muted)" }}>{cat}</div>
+              {isHomeCat && ctx === "home" && <span className="pill sold" style={{ fontSize: 10.5 }}>Now that you're here</span>}
+            </div>
+            {qs.map(q => (
+              <QRow key={q.id} q={q} ans={answers[q.id] || {}} highlight={isHomeCat && ctx === "home"}
+                onCycle={() => cycle(q.id)} onNote={(v) => setAns(q.id, { note: v })} onTask={() => addTask(q.q)} />
+            ))}
+          </div>
+        );
+      })}
+
+      {/* upcoming home questions when in store */}
+      {ctx === "store" && (
+        <div style={{ marginTop: 8 }}>
+          <div className="divider" />
+          <div className="row" style={{ gap: 8, marginBottom: 10 }}>
+            <Icon name="home" size={16} style={{ color: "var(--muted)" }} />
+            <div className="section-title" style={{ margin: 0 }}>Save for the home visit</div>
+          </div>
+          <div className="sm muted" style={{ marginBottom: 11 }}>Switch this project to <b>At home</b> when you're on site and these become active.</div>
+          {homeOnly.map(q => (
+            <div key={q.id} className="qitem" style={{ opacity: .6, padding: "11px 14px" }}>
+              <Icon name="pin" size={16} style={{ color: "var(--muted)", marginTop: 2, flex: "none" }} />
+              <div className="grow"><div className="sm b">{q.q}</div>{q.hint && <div className="tiny muted">{q.hint}</div>}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QRow({ q, ans, highlight, onCycle, onNote, onTask }) {
+  const [open, setOpen] = useState(false);
+  const val = ans.val;
+  const cls = val === "yes" ? "yes" : val === "no" ? "no" : val === "flag" ? "flag" : "";
+  const icon = val === "yes" ? "check" : val === "no" ? "x" : val === "flag" ? "flag" : null;
+  return (
+    <div className={"qitem" + (highlight ? " home" : "") + (val ? " answered" : "")}>
+      <button className={"checkbox " + cls} onClick={onCycle} aria-label="Cycle answer">
+        {icon && <Icon name={icon} size={16} />}
+      </button>
+      <div className="grow">
+        <div className="sb" style={{ fontSize: 14.5, lineHeight: 1.35 }}>{q.q}</div>
+        {q.hint && <div className="tiny muted" style={{ marginTop: 2 }}>{q.hint}</div>}
+        {ans.note && <div className="sm" style={{ marginTop: 6, padding: "7px 10px", background: "var(--surface-3)", borderRadius: 8 }}>{ans.note}</div>}
+        <div className="row" style={{ gap: 14, marginTop: 8 }}>
+          <button className="linkbtn tiny" onClick={() => setOpen(o => !o)}><Icon name="note" size={12} style={{ verticalAlign: -2 }} /> {ans.note ? "Edit note" : "Note"}</button>
+          {(val === "yes" || val === "flag") && <button className="linkbtn tiny" onClick={onTask}><Icon name="plus" size={12} style={{ verticalAlign: -2 }} /> Follow-up</button>}
+        </div>
+        {open && (
+          <textarea className="input" autoFocus style={{ marginTop: 8, minHeight: 56 }} placeholder="Add detail…" defaultValue={ans.note || ""}
+            onBlur={e => { onNote(e.target.value); setOpen(false); }} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { QuestionsTab });
+
+</script>
+<script type="text/babel">
+/* Floorwalk — Budget, Tasks, Export */
+function BudgetTab({ p, mutate }) {
+  const items = p.estimate || [];
+  const total = items.reduce((s, i) => s + (Number(i.amt) || 0), 0);
+  const budget = Number(p.budget) || 0;
+  const pct = budget ? Math.min(100, Math.round((total / budget) * 100)) : 0;
+  const over = budget && total > budget;
+  const add = () => mutate(p.id, d => { d.estimate = d.estimate || []; d.estimate.push({ id: window.FW.uid("e"), label: "", amt: "" }); });
+  const set = (id, k, v) => mutate(p.id, d => { d.estimate.find(x => x.id === id)[k] = v; });
+  const del = (id) => mutate(p.id, d => { d.estimate = d.estimate.filter(x => x.id !== id); });
+
+  return (
+    <div className="pad">
+      <div className="card" style={{ padding: 16, marginBottom: 16 }}>
+        <div className="spread" style={{ marginBottom: 6 }}>
+          <div className="grow"><Field label="Customer budget">
+            <div className="row" style={{ gap: 6 }}>
+              <span className="lg b muted">$</span>
+              <input className="input" type="number" inputMode="numeric" placeholder="0" value={p.budget || ""} onChange={e => mutate(p.id, d => d.budget = e.target.value)} />
+            </div>
+          </Field></div>
+        </div>
+        <div className="spread" style={{ marginBottom: 7 }}>
+          <span className="sm muted b">Running estimate</span>
+          <span className="b" style={{ color: over ? "var(--danger)" : "var(--ink)" }}>{money(total)}</span>
+        </div>
+        <div className="bar"><i style={{ width: pct + "%", background: over ? "var(--danger)" : "var(--accent)" }} /></div>
+        <div className="spread" style={{ marginTop: 7 }}>
+          <span className="tiny muted">{budget ? pct + "% of budget" : "Set a budget to track"}</span>
+          {budget > 0 && <span className="tiny b" style={{ color: over ? "var(--danger)" : "var(--good)" }}>{over ? money(total - budget) + " over" : money(budget - total) + " left"}</span>}
+        </div>
+      </div>
+
+      <div className="spread" style={{ marginBottom: 11 }}>
+        <div className="section-title" style={{ margin: 0 }}>Estimate line items</div>
+        <button className="btn sm" onClick={add}><Icon name="plus" size={15} />Add</button>
+      </div>
+      {items.length === 0 && <div className="sm muted" style={{ marginBottom: 10 }}>Add rooms, materials, labor, removal, etc.</div>}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {items.map(i => (
+          <div key={i.id} className="row" style={{ gap: 8 }}>
+            <input className="input" placeholder="e.g. Kitchen LVP + install" value={i.label} onChange={e => set(i.id, "label", e.target.value)} />
+            <div className="row" style={{ gap: 2, width: 120, flex: "none" }}>
+              <span className="muted b">$</span>
+              <input className="input" type="number" inputMode="numeric" placeholder="0" value={i.amt} onChange={e => set(i.id, "amt", e.target.value)} />
+            </div>
+            <button className="iconbtn ghost" onClick={() => del(i.id)} aria-label="Remove"><Icon name="x" size={18} /></button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TasksTab({ p, mutate }) {
+  const [text, setText] = useState("");
+  const tasks = [...p.tasks].sort((a, b) => (a.done - b.done));
+  const add = () => { if (!text.trim()) return; mutate(p.id, d => d.tasks.push({ id: window.FW.uid("t"), text: text.trim(), done: false, due: "" })); setText(""); };
+  const toggle = (id) => mutate(p.id, d => { const t = d.tasks.find(x => x.id === id); t.done = !t.done; });
+  const setDue = (id, v) => mutate(p.id, d => d.tasks.find(x => x.id === id).due = v);
+  const del = (id) => mutate(p.id, d => d.tasks = d.tasks.filter(x => x.id !== id));
+  const open = tasks.filter(t => !t.done).length;
+
+  return (
+    <div className="pad">
+      <div className="section-title">Follow-ups & reminders {open > 0 && <span style={{ color: "var(--accent)" }}>· {open} open</span>}</div>
+      <div className="row" style={{ gap: 8, marginBottom: 14 }}>
+        <input className="input" placeholder="Add a follow-up…" value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === "Enter" && add()} />
+        <button className="btn primary" onClick={add}><Icon name="plus" size={18} /></button>
+      </div>
+      {tasks.length === 0 && (
+        <div className="empty card flat" style={{ background: "var(--surface-2)" }}>
+          <div className="ic"><Icon name="tasks" size={24} /></div>
+          <div className="b" style={{ color: "var(--ink)" }}>All clear</div>
+        </div>
+      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+        {tasks.map(t => (
+          <div key={t.id} className="qitem" style={{ alignItems: "center", opacity: t.done ? .55 : 1 }}>
+            <button className={"checkbox " + (t.done ? "yes" : "")} onClick={() => toggle(t.id)} aria-label="Toggle">{t.done && <Icon name="check" size={16} />}</button>
+            <div className="grow">
+              <div className="sb" style={{ textDecoration: t.done ? "line-through" : "none" }}>{t.text}</div>
+              <div className="row" style={{ gap: 6, marginTop: 5 }}>
+                <Icon name="calendar" size={13} style={{ color: "var(--muted)" }} />
+                <input type="date" className="input" style={{ width: "auto", padding: "4px 8px", fontSize: 12.5, border: "none", background: "var(--surface-3)" }}
+                  value={t.due} onChange={e => setDue(t.id, e.target.value)} />
+              </div>
+            </div>
+            <button className="iconbtn ghost" onClick={() => del(t.id)} aria-label="Delete"><Icon name="trash" size={17} /></button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Export ---------- */
+function buildCSV(p) {
+  const rows = [["Section", "Item", "Detail", "Status/Value"]];
+  rows.push(["Customer", p.customerName, p.phone + " " + p.email, p.status]);
+  rows.push(["Site", p.address, p.projectType, p.visitContext === "home" ? "At home" : "In store"]);
+  rows.push(["Budget", "Target", "", p.budget || ""]);
+  p.rooms.forEach(r => {
+    rows.push(["Room", r.name, r.sqft ? r.sqft + " sqft" : "", r.notes || ""]);
+    r.products.forEach(pr => {
+      const c = window.FW.CATEGORIES.find(x => x.id === pr.cat);
+      rows.push(["  Product", (c ? c.label + ": " : "") + pr.name, [pr.color, pr.note].filter(Boolean).join(" / "), pr.status]);
+    });
+  });
+  const A = p.answers || {};
+  window.FW.QUESTIONS.forEach(q => { if (A[q.id] && A[q.id].val) rows.push(["Q&A", q.q, A[q.id].note || "", A[q.id].val]); });
+  p.tasks.forEach(t => rows.push(["Task", t.text, t.due || "", t.done ? "done" : "open"]));
+  return rows.map(r => r.map(c => `"${String(c == null ? "" : c).replace(/"/g, '""')}"`).join(",")).join("\n");
+}
+
+/* ---------- Printable one-page summary ---------- */
+function buildSummaryHTML(p) {
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const cat = (id) => (window.FW.CATEGORIES.find(c => c.id === id) || {}).label || id;
+  const st = (window.FW.STATUSES.find(s => s.id === p.status) || {}).label || p.status;
+  const A = p.answers || {};
+  const valLabel = { yes: "Yes", no: "No", flag: "Follow up" };
+  const fdate = (d) => { try { return d ? new Date(d + "T00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : ""; } catch (e) { return d; } };
+  const today = new Date().toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+  const m = (n) => "$" + (Number(n) || 0).toLocaleString();
+  const estTotal = (p.estimate || []).reduce((s, i) => s + (Number(i.amt) || 0), 0);
+
+  const rooms = p.rooms.map(r => {
+    const prods = r.products.map(pr => `<tr><td class="cat">${esc(cat(pr.cat))}</td><td><b>${esc(pr.name || "—")}</b>${pr.color || pr.note ? `<span class="sub"> — ${esc([pr.color, pr.note].filter(Boolean).join(", "))}</span>` : ""}</td><td class="st ${pr.status}">${pr.status === "selected" ? "Selected" : "Considering"}</td></tr>`).join("");
+    const allPhotos = [...(r.photos || []), ...r.products.flatMap(pr => pr.photos || [])];
+    const photos = allPhotos.length ? `<div class="photos">${allPhotos.slice(0, 8).map(ph => `<img src="${ph.src}"/>`).join("")}</div>` : "";
+    return `<div class="room"><div class="rhead"><h3>${esc(r.name)}</h3><span class="sub">${r.sqft ? esc(r.sqft) + " sq ft" : ""}</span></div>${r.notes ? `<div class="rnote">${esc(r.notes)}</div>` : ""}${prods ? `<table>${prods}</table>` : `<div class="empty">No selections yet</div>`}${photos}</div>`;
+  }).join("");
+
+  const answered = window.FW.QUESTIONS.filter(q => A[q.id] && A[q.id].val);
+  const qa = answered.length ? `<table class="qa">${answered.map(q => `<tr><td>${esc(q.q)}</td><td class="a ${A[q.id].val}">${valLabel[A[q.id].val] || ""}</td><td class="sub">${esc(A[q.id].note || "")}</td></tr>`).join("")}</table>` : `<div class="empty">No questions logged yet</div>`;
+
+  const est = (p.estimate || []).length ? `<table class="est">${(p.estimate).map(i => `<tr><td>${esc(i.label || "—")}</td><td class="num">${m(i.amt)}</td></tr>`).join("")}<tr class="tot"><td>Estimate total</td><td class="num">${m(estTotal)}</td></tr>${p.budget ? `<tr><td>Customer budget</td><td class="num">${m(p.budget)}</td></tr>` : ""}</table>` : "";
+
+  const openTasks = p.tasks.filter(t => !t.done);
+  const tasks = openTasks.length ? `<ul class="tasks">${openTasks.map(t => `<li>□ ${esc(t.text)}${t.due ? ` <span class="sub">(by ${fdate(t.due)})</span>` : ""}</li>`).join("")}</ul>` : "";
+
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(p.customerName)} — Project Summary</title><style>
+    *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color:#231f1a;font-size:13px;line-height:1.5;}
+    .wrap{max-width:760px;margin:0 auto;padding:32px 30px;}
+    .top{display:flex;align-items:center;gap:12px;border-bottom:2px solid #8a5a2b;padding-bottom:14px;margin-bottom:18px;}
+    .mark{width:30px;height:30px;border-radius:7px;background:#8a5a2b;}
+    .brand{font-weight:800;font-size:18px;letter-spacing:-.02em;flex:1;}
+    .top .meta{text-align:right;font-size:11px;color:#8c8073;}
+    h1{font-size:22px;margin:0 0 2px;letter-spacing:-.02em;}
+    h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:#8c8073;margin:24px 0 9px;border-bottom:1px solid #e6dccd;padding-bottom:5px;}
+    h3{font-size:15px;margin:0;}
+    .sub{color:#8c8073;font-weight:400;}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 24px;margin-top:6px;}
+    .grid div{padding:3px 0;border-bottom:1px solid #f0eadf;}
+    .grid b{display:inline-block;min-width:96px;color:#5b5147;font-weight:600;}
+    .pill{display:inline-block;background:#f1e4d3;color:#8a5a2b;font-weight:700;font-size:11px;padding:2px 9px;border-radius:20px;}
+    .room{margin:12px 0;page-break-inside:avoid;}
+    .rhead{display:flex;align-items:baseline;gap:10px;}
+    .rnote{color:#5b5147;font-size:12px;margin:2px 0 6px;}
+    table{width:100%;border-collapse:collapse;margin-top:5px;}
+    td{padding:5px 8px;border-bottom:1px solid #eee;vertical-align:top;}
+    .cat{color:#8c8073;font-size:11px;width:120px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;}
+    .st{width:90px;text-align:right;font-size:11px;font-weight:700;}
+    .st.selected{color:#1f7a4d;} .st.considering{color:#b07d1a;}
+    .qa td:nth-child(2){width:80px;font-weight:700;} .qa .a.yes{color:#1f7a4d;} .qa .a.no{color:#b3402a;} .qa .a.flag{color:#b07d1a;}
+    .num{text-align:right;font-variant-numeric:tabular-nums;width:120px;}
+    .est .tot td{border-top:2px solid #231f1a;font-weight:800;}
+    .tasks{margin:6px 0 0;padding-left:2px;list-style:none;} .tasks li{padding:3px 0;}
+    .photos{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;} .photos img{width:88px;height:88px;object-fit:cover;border-radius:6px;border:1px solid #e6dccd;}
+    .empty{color:#b0a799;font-style:italic;padding:4px 0;}
+    .foot{margin-top:30px;padding-top:12px;border-top:1px solid #e6dccd;font-size:11px;color:#8c8073;display:flex;justify-content:space-between;}
+    @media print{.wrap{padding:0;}@page{margin:14mm;}}
+  </style></head><body><div class="wrap">
+    <div class="top"><div class="mark"></div><div class="brand">Floorwalk</div><div class="meta">Project Summary<br/>${today}</div></div>
+    <h1>${esc(p.customerName)}</h1>
+    <div><span class="pill">${esc(st)}</span> &nbsp;<span class="sub">${esc(p.projectType)} · ${p.visitContext === "home" ? "At-home" : "In-store"}</span></div>
+    <div class="grid">
+      ${p.phone ? `<div><b>Phone</b>${esc(p.phone)}</div>` : ""}
+      ${p.email ? `<div><b>Email</b>${esc(p.email)}</div>` : ""}
+      ${p.address ? `<div><b>Address</b>${esc(p.address)}</div>` : ""}
+      ${p.targetDate ? `<div><b>Target date</b>${fdate(p.targetDate)}</div>` : ""}
+      ${p.budget ? `<div><b>Budget</b>${m(p.budget)}</div>` : ""}
+    </div>
+    ${p.notes ? `<h2>Notes</h2><div>${esc(p.notes)}</div>` : ""}
+    <h2>Rooms &amp; selections</h2>${rooms || `<div class="empty">No rooms added</div>`}
+    <h2>Questions &amp; answers</h2>${qa}
+    ${est ? `<h2>Estimate</h2>${est}` : ""}
+    ${tasks ? `<h2>Follow-ups</h2>${tasks}` : ""}
+    <div class="foot"><span>Prepared with Floorwalk</span><span>${esc(p.customerName)}</span></div>
+  </div></body></html>`;
+}
+
+function printSummary(p) {
+  const w = window.open("", "_blank");
+  if (!w) { alert("Please allow pop-ups to print the summary."); return; }
+  w.document.write(buildSummaryHTML(p));
+  w.document.close(); w.focus();
+  setTimeout(() => { try { w.print(); } catch (e) {} }, 500);
+}
+
+function ExportSheet({ p, onClose }) {
+  const [copied, setCopied] = useState("");
+  const csv = buildCSV(p);
+  function download() {
+    const blob = new Blob([csv], { type: "text/csv" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+    a.download = p.customerName.replace(/\s+/g, "_") + "_floorwalk.csv"; a.click();
+  }
+  function copy() { navigator.clipboard && navigator.clipboard.writeText(csv); setCopied("csv"); setTimeout(() => setCopied(""), 1600); }
+
+  return (
+    <Sheet title="Share & sync" onClose={onClose}>
+      <div className="card" style={{ padding: 16, marginBottom: 14, background: "var(--surface-2)" }}>
+        <div className="row" style={{ gap: 12 }}>
+          <div style={{ width: 42, height: 42, borderRadius: 11, background: "var(--good-soft)", color: "var(--good)", display: "grid", placeItems: "center", flex: "none" }}><Icon name="sheet" size={22} /></div>
+          <div className="grow">
+            <div className="b">Google Sheets sync</div>
+            <div className="sm muted">Push this project to your shared store spreadsheet.</div>
+          </div>
+        </div>
+        <button className="btn block" style={{ marginTop: 12 }} onClick={() => { setCopied("sheet"); setTimeout(() => setCopied(""), 1800); }}>
+          <Icon name="sheet" size={17} />{copied === "sheet" ? "Connect a Google account to enable" : "Connect Google Sheets"}
+        </button>
+        {copied === "sheet" && <div className="tiny muted" style={{ marginTop: 8, textAlign: "center" }}>Demo: in the live app this opens Google sign-in and writes a row per room.</div>}
+      </div>
+
+      <div className="card" style={{ padding: 16, marginBottom: 14, background: "var(--surface-2)" }}>
+        <div className="row" style={{ gap: 12 }}>
+          <div style={{ width: 42, height: 42, borderRadius: 11, background: "var(--accent-soft)", color: "var(--accent)", display: "grid", placeItems: "center", flex: "none" }}><Icon name="note" size={22} /></div>
+          <div className="grow">
+            <div className="b">Print summary</div>
+            <div className="sm muted">A clean one-pager to print or save as PDF for the customer.</div>
+          </div>
+        </div>
+        <button className="btn primary block" style={{ marginTop: 12 }} onClick={() => printSummary(p)}><Icon name="share" size={17} />Print / Save as PDF</button>
+      </div>
+
+      <div className="section-title">Export now</div>
+      <button className="btn block" style={{ marginBottom: 9 }} onClick={download}><Icon name="share" size={17} />Download CSV</button>
+      <button className="btn block" onClick={copy}><Icon name="sheet" size={17} />{copied === "csv" ? "Copied to clipboard ✓" : "Copy as spreadsheet rows"}</button>
+
+      <div className="divider" />
+      <div className="section-title">Preview</div>
+      <pre style={{ background: "var(--surface-3)", borderRadius: 10, padding: 12, fontSize: 11, overflow: "auto", maxHeight: 180, margin: 0, fontFamily: "ui-monospace, Menlo, monospace", color: "var(--ink-2)" }}>{csv}</pre>
+    </Sheet>
+  );
+}
+
+Object.assign(window, { BudgetTab, TasksTab, ExportSheet });
+
+</script>
+<script type="text/babel">
+/* Floorwalk — Project detail shell + Overview tab + tab bar */
+function ProjectDetail({ p, mutate, actions }) {
+  const [tab, setTab] = useState("overview");
+  const [exporting, setExporting] = useState(false);
+  const [photos, setPhotos] = useState(false);
+  const [editingContact, setEditingContact] = useState(false);
+  const ctx = p.visitContext || "store";
+  const openTasks = p.tasks.filter(t => !t.done).length;
+  const unanswered = window.FW.QUESTIONS.filter(q => q.ctx.includes(ctx)).filter(q => !((p.answers || {})[q.id] || {}).val).length;
+
+  const goBack = () => { if (tab !== "overview") { setTab("overview"); window.scrollTo(0, 0); } else { actions.back(); } };
+
+  const TABS = [
+    { id: "overview", label: "Overview", icon: "user" },
+    { id: "rooms", label: "Rooms", icon: "rooms", badge: p.rooms.length || null },
+    { id: "questions", label: "Questions", icon: "question", badge: unanswered || null },
+    { id: "budget", label: "Budget", icon: "money" },
+    { id: "tasks", label: "Tasks", icon: "tasks", badge: openTasks || null },
+  ];
+
+  return (
+    <div className="screen">
+      <div className="topbar">
+        <button className="iconbtn" onClick={goBack} aria-label={tab !== "overview" ? "Back to overview" : "Back to all projects"}><Icon name="back" /></button>
+        <div className="grow" style={{ minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}><h1 style={{ margin: 0 }}>{p.customerName}</h1><button className="iconbtn ghost" style={{ width: 28, height: 28, flex: "none" }} onClick={() => setEditingContact(true)} aria-label="Edit customer"><Icon name="edit" size={14} /></button></div>
+          <div className="sub">{tab !== "overview" ? ("‹ Overview · " + (TABS.find(x => x.id === tab) || {}).label) : p.projectType}</div>
+        </div>
+        <button className="iconbtn" onClick={() => setPhotos(true)} aria-label="Photos" style={{ position: "relative" }}>
+          <Icon name="camera" />
+          {countPhotos(p) > 0 && <span style={{ position: "absolute", top: -6, right: -6, background: "var(--accent)", color: "var(--accent-ink)", fontSize: 10, fontWeight: 800, minWidth: 16, height: 16, borderRadius: 8, display: "grid", placeItems: "center", padding: "0 4px" }}>{countPhotos(p)}</span>}
+        </button>
+        <button className="iconbtn" onClick={() => setExporting(true)} aria-label="Share"><Icon name="share" /></button>
+      </div>
+
+      {/* visit context + status control bar */}
+      <div className="pad" style={{ paddingBottom: 4, position: "sticky", top: 69, zIndex: 20, background: "color-mix(in srgb, var(--bg) 92%, transparent)", backdropFilter: "blur(8px)" }}>
+        <div className="spread" style={{ gap: 10 }}>
+          <div className="seg" style={{ flex: 1 }}>
+            <button style={{ flex: 1, justifyContent: "center" }} className={ctx === "store" ? "on" : ""} onClick={() => mutate(p.id, d => d.visitContext = "store")}><Icon name="store" size={15} />In store</button>
+            <button style={{ flex: 1, justifyContent: "center" }} className={ctx === "home" ? "on" : ""} onClick={() => mutate(p.id, d => d.visitContext = "home")}><Icon name="home" size={15} />At home</button>
+          </div>
+          <select className="input" style={{ width: "auto", fontWeight: 700, padding: "9px 10px" }} value={p.status} onChange={e => mutate(p.id, d => d.status = e.target.value)}>
+            {window.FW.STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {tab === "overview" && <OverviewTab p={p} mutate={mutate} actions={actions} ctx={ctx} go={setTab} />}
+      {tab === "rooms" && <RoomsTab p={p} mutate={mutate} ctx={ctx} />}
+      {tab === "questions" && <QuestionsTab p={p} mutate={mutate} ctx={ctx} />}
+      {tab === "budget" && <BudgetTab p={p} mutate={mutate} />}
+      {tab === "tasks" && <TasksTab p={p} mutate={mutate} />}
+
+      <div className="tabbar">
+        {TABS.map(t => (
+          <button key={t.id} className={tab === t.id ? "on" : ""} onClick={() => setTab(t.id)} style={{ position: "relative" }}>
+            {t.badge ? <span className="badge">{t.badge}</span> : null}
+            <Icon name={t.icon} size={21} stroke={tab === t.id ? 2.3 : 2} />
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {exporting && <ExportSheet p={p} onClose={() => setExporting(false)} />}
+      {photos && <ProjectPhotosSheet p={p} mutate={mutate} onClose={() => setPhotos(false)} />}
+      {editingContact && <EditContactSheet p={p} mutate={mutate} onClose={() => setEditingContact(false)} />}
+    </div>
+  );
+}
+
+function OverviewTab({ p, mutate, actions, ctx, go }) {
+  const [editing, setEditing] = useState(false);
+  const sel = p.rooms.reduce((n, r) => n + r.products.filter(x => x.status === "selected").length, 0);
+  const total = (p.estimate || []).reduce((s, i) => s + (Number(i.amt) || 0), 0);
+
+  return (
+    <div className="pad">
+      {/* stats — tap to jump; the back arrow returns you to Overview */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 9, marginBottom: 16 }}>
+        {[
+          { k: "Rooms", v: p.rooms.length, ic: "rooms", go: "rooms" },
+          { k: "Picked", v: sel, ic: "check", go: "rooms" },
+          { k: "Estimate", v: total ? "$" + (total / 1000).toFixed(total >= 10000 ? 0 : 1) + "k" : "—", ic: "money", go: "budget" },
+        ].map(s => (
+          <button key={s.k} className="card" onClick={() => go(s.go)} style={{ padding: "13px 12px", textAlign: "left", cursor: "pointer", font: "inherit", color: "inherit" }}>
+            <Icon name={s.ic} size={16} style={{ color: "var(--accent)" }} />
+            <div className="xb" style={{ fontSize: 22, marginTop: 6, lineHeight: 1 }}>{s.v}</div>
+            <div className="tiny muted b" style={{ marginTop: 3 }}>{s.k}</div>
+          </button>
+        ))}
+      </div>
+
+      {/* contact */}
+      <div className="card" style={{ padding: 16, marginBottom: 14 }}>
+        <div className="spread" style={{ marginBottom: 12 }}>
+          <div className="section-title" style={{ margin: 0 }}>Customer</div>
+          <button className="linkbtn sm" onClick={() => setEditing(true)}><Icon name="edit" size={13} style={{ verticalAlign: -2 }} /> Edit</button>
+        </div>
+        <div className="xb" style={{ fontSize: 18 }}>{p.customerName}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 9, marginTop: 12 }}>
+          {p.phone && <a className="row" href={"tel:" + p.phone} style={{ gap: 10, color: "var(--ink)", textDecoration: "none" }}><Icon name="phone" size={16} style={{ color: "var(--accent)" }} /><span className="sb">{p.phone}</span></a>}
+          {p.email && <a className="row" href={"mailto:" + p.email} style={{ gap: 10, color: "var(--ink)", textDecoration: "none" }}><Icon name="mail" size={16} style={{ color: "var(--accent)" }} /><span className="sb">{p.email}</span></a>}
+          {p.address && <div className="row" style={{ gap: 10 }}><Icon name="pin" size={16} style={{ color: "var(--accent)", flex: "none" }} /><span className="sb">{p.address}</span></div>}
+          {!p.phone && !p.email && !p.address && <div className="sm muted">No contact details yet — tap Edit.</div>}
+        </div>
+      </div>
+
+      {/* project meta */}
+      <div className="card" style={{ padding: 16, marginBottom: 14 }}>
+        <div className="section-title">Project</div>
+        <div className="spread" style={{ padding: "9px 0", borderBottom: "1px solid var(--line-2)" }}>
+          <span className="sm muted">Type</span>
+          <select className="input" style={{ width: "auto", padding: "5px 8px", fontWeight: 600, fontSize: 13.5 }} value={p.projectType} onChange={e => mutate(p.id, d => d.projectType = e.target.value)}>
+            {window.FW.PROJECT_TYPES.map(t => <option key={t}>{t}</option>)}
+          </select>
+        </div>
+        <div className="spread" style={{ padding: "11px 0" }}>
+          <span className="sm muted">Target date</span>
+          <input type="date" className="input" style={{ width: "auto", padding: "5px 8px", fontSize: 13.5, fontWeight: 600 }} value={p.targetDate || ""} onChange={e => mutate(p.id, d => d.targetDate = e.target.value)} />
+        </div>
+      </div>
+
+      {/* notes */}
+      <div className="card" style={{ padding: 16, marginBottom: 14 }}>
+        <div className="section-title">Notes</div>
+        <textarea className="input" placeholder="Anything to remember about this customer or job…" value={p.notes || ""} onChange={e => mutate(p.id, d => d.notes = e.target.value)} />
+      </div>
+
+      <button className="btn block" style={{ color: "var(--danger)" }} onClick={() => { if (confirm("Delete this entire project?")) { actions.deleteProject(p.id); actions.back(); } }}>
+        <Icon name="trash" size={16} />Delete project
+      </button>
+
+      {editing && <EditContactSheet p={p} mutate={mutate} onClose={() => setEditing(false)} />}
+    </div>
+  );
+}
+
+function EditContactSheet({ p, mutate, onClose }) {
+  const [f, setF] = useState({ customerName: p.customerName, phone: p.phone, email: p.email, address: p.address });
+  const set = (k, v) => setF(s => ({ ...s, [k]: v }));
+  return (
+    <Sheet title="Edit customer" onClose={onClose}
+      foot={<button className="btn primary block" onClick={() => { mutate(p.id, d => Object.assign(d, f)); onClose(); }}>Save</button>}>
+      <Field label="Name"><input className="input" value={f.customerName} onChange={e => set("customerName", e.target.value)} /></Field>
+      <Field label="Phone"><input className="input" type="tel" value={f.phone} onChange={e => set("phone", e.target.value)} /></Field>
+      <Field label="Email"><input className="input" type="email" value={f.email} onChange={e => set("email", e.target.value)} /></Field>
+      <Field label="Address"><input className="input" value={f.address} onChange={e => set("address", e.target.value)} /></Field>
+    </Sheet>
+  );
+}
+
+Object.assign(window, { ProjectDetail });
+
+</script>
+<script type="text/babel">
+/* Floorwalk — root app: state, persistence, theme tweaks */
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "walnut",
+  "corners": "soft",
+  "fontScale": 16,
+  "dark": false
+}/*EDITMODE-END*/;
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [db, setDb] = useState(() => window.FW.load());
+  const [activeId, setActiveId] = useState(null);
+
+  // persist
+  useEffect(() => { window.FW.save(db); }, [db]);
+
+  // apply theme
+  useEffect(() => {
+    const r = document.documentElement;
+    r.setAttribute("data-theme", t.theme);
+    r.setAttribute("data-corners", t.corners);
+    r.setAttribute("data-dark", t.dark ? "true" : "false");
+    r.style.setProperty("--fs", (t.fontScale || 16) + "px");
+  }, [t.theme, t.corners, t.dark, t.fontScale]);
+
+  // quick dark toggle from the home top bar
+  useEffect(() => { window.__fwToggleDark = () => setTweak("dark", !t.dark); }, [t.dark]);
+
+  function mutate(id, fn) {
+    setDb(prev => ({
+      ...prev,
+      projects: prev.projects.map(p => {
+        if (p.id !== id) return p;
+        const c = structuredClone(p); fn(c); c.updatedAt = Date.now(); return c;
+      }),
+    }));
+  }
+  const actions = {
+    addProject: (proj) => setDb(prev => ({ ...prev, projects: [proj, ...prev.projects] })),
+    deleteProject: (id) => setDb(prev => ({ ...prev, projects: prev.projects.filter(p => p.id !== id) })),
+    open: (id) => { setActiveId(id); window.scrollTo(0, 0); },
+    back: () => { setActiveId(null); window.scrollTo(0, 0); },
+  };
+
+  const active = db.projects.find(p => p.id === activeId);
+
+  return (
+    <div className="app">
+      {active
+        ? <ProjectDetail p={active} mutate={mutate} actions={actions} />
+        : <ProjectList db={db} actions={actions} />}
+
+      <TweaksPanel>
+        <TweakSection label="Visual direction" />
+        <TweakRadio label="Theme" value={t.theme} options={["walnut", "terracotta", "slate"]} onChange={v => setTweak("theme", v)} />
+        <TweakRadio label="Corners" value={t.corners} options={["soft", "sharp"]} onChange={v => setTweak("corners", v)} />
+        <TweakSection label="Display" />
+        <TweakSlider label="Text size" value={t.fontScale} min={14} max={19} step={1} unit="px" onChange={v => setTweak("fontScale", v)} />
+        <TweakToggle label="Dark mode" value={t.dark} onChange={v => setTweak("dark", v)} />
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+
+</script>
+</body>
+</html>
