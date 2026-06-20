@@ -10,7 +10,7 @@
 <style>
 /* ============ THEME TOKENS ============ */
 :root{
-  --bg:#f1ece4; --surface:#ffffff; --surface-2:#faf6f0; --surface-3:#f3ede4;
+  --bg:#e8f4f2; --surface:#ffffff; --surface-2:#f0faf8; --surface-3:#e2f2ef;
   --ink:#231f1a; --ink-2:#5b5147; --muted:#928678; --line:#e6dccd; --line-2:#efe7da;
   --accent:#8a5a2b; --accent-2:#6f4621; --accent-soft:#f1e4d3; --accent-ink:#ffffff;
   --good:oklch(0.60 0.09 150); --good-soft:oklch(0.94 0.04 150);
@@ -400,8 +400,20 @@ a{color:var(--accent);}
     try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {}
   }
 
+  const DEFAULT_TASKS = [
+    "Upload job site photos",
+    "Measure all rooms",
+    "Customer approves product selections",
+    "Submit estimate to customer",
+    "Follow up #1",
+    "Follow up #2",
+    "Confirm final products",
+    "Get signed contract / authorization",
+    "Collect deposit",
+  ];
+
   window.FW = {
-    CATEGORIES, PROJECT_TYPES, STATUSES, ROOM_PRESETS, QUESTIONS,
+    CATEGORIES, PROJECT_TYPES, STATUSES, ROOM_PRESETS, QUESTIONS, DEFAULT_TASKS,
     load, save, sampleData,
     uid: (p) => (p || "id") + "_" + Math.random().toString(36).slice(2, 9),
   };
@@ -1078,7 +1090,7 @@ function ProjectList({ db, actions }) {
             <div className="sm" style={{ marginTop: 4 }}>{q ? "Try a different search." : "Tap + to start a customer walkthrough."}</div>
           </div>
         )}
-        {list.map(p => <ProjectCard key={p.id} p={p} onOpen={() => actions.open(p.id)} />)}
+        {list.map(p => <ProjectCard key={p.id} p={p} onOpen={() => actions.open(p.id)} onDelete={actions.deleteProject} />)}
       </div>
 
       <button className="fab" onClick={() => setAdding(true)} aria-label="New project"><Icon name="plus" size={26} /></button>
@@ -1088,34 +1100,68 @@ function ProjectList({ db, actions }) {
   );
 }
 
-function ProjectCard({ p, onOpen }) {
+function ProjectCard({ p, onOpen, onDelete }) {
   const st = window.FW.STATUSES.find(s => s.id === p.status) || { label: p.status };
   const sel = p.rooms.reduce((n, r) => n + r.products.filter(x => x.status === "selected").length, 0);
   const openTasks = p.tasks.filter(t => !t.done).length;
+  const [offset, setOffset] = useState(0);
+  const [swiped, setSwiped] = useState(false);
+  const startX = useRef(null);
+  const DELETE_THRESHOLD = 80;
+
+  const onTouchStart = (e) => { startX.current = e.touches[0].clientX; };
+  const onTouchMove = (e) => {
+    if (startX.current === null) return;
+    const dx = startX.current - e.touches[0].clientX;
+    if (dx > 0) setOffset(Math.min(dx, DELETE_THRESHOLD));
+  };
+  const onTouchEnd = () => {
+    if (offset >= DELETE_THRESHOLD) { setSwiped(true); }
+    else { setOffset(0); }
+    startX.current = null;
+  };
+
   return (
-    <button className="card" onClick={onOpen}
-      style={{ textAlign: "left", cursor: "pointer", padding: 16, font: "inherit", color: "inherit", display: "block", width: "100%" }}>
-      <div className="spread" style={{ alignItems: "flex-start" }}>
-        <div className="grow">
-          <div className="xb" style={{ fontSize: 17 }}>{p.customerName}</div>
-          <div className="sm muted" style={{ marginTop: 2, display: "flex", alignItems: "center", gap: 5 }}>
-            <Icon name="pin" size={13} /> {p.address || "No address yet"}
-          </div>
+    <div style={{ position: "relative", borderRadius: "var(--radius)", overflow: "hidden" }}>
+      {/* Delete button revealed behind */}
+      <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: DELETE_THRESHOLD,
+        background: "var(--danger)", display: "flex", alignItems: "center", justifyContent: "center",
+        borderRadius: "var(--radius)", cursor: "pointer" }}
+        onClick={() => { if (confirm("Delete " + p.customerName + "?")) onDelete(p.id); setSwiped(false); setOffset(0); }}>
+        <div style={{ color: "#fff", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+          <Icon name="trash" size={20} />
+          <span style={{ fontSize: 11, fontWeight: 800 }}>Delete</span>
         </div>
-        <span className={"pill " + p.status}><span className="dot" />{st.label}</span>
       </div>
-      <div className="row" style={{ marginTop: 13, gap: 8, flexWrap: "wrap" }}>
-        <span className="pill" style={{ background: "var(--surface-3)" }}>{p.projectType}</span>
-        <span className="pill" style={{ background: "var(--surface-3)" }}><Icon name="rooms" size={13} />{p.rooms.length} room{p.rooms.length !== 1 ? "s" : ""}</span>
-        {sel > 0 && <span className="pill" style={{ background: "var(--surface-3)" }}><Icon name="check" size={13} />{sel} picked</span>}
-        {openTasks > 0 && <span className="pill quoting"><Icon name="tasks" size={13} />{openTasks} to-do</span>}
-      </div>
-      <div className="divider" style={{ margin: "13px 0 10px" }} />
-      <div className="spread">
-        <span className="tiny muted">Updated {relTime(p.updatedAt)}</span>
-        <span className="tiny b" style={{ color: "var(--accent)", display: "flex", alignItems: "center", gap: 3 }}>Open<Icon name="chevron" size={14} /></span>
-      </div>
-    </button>
+      {/* Card slides left to reveal delete */}
+      <button className="card" onClick={() => { if (swiped || offset > 10) { setOffset(0); setSwiped(false); } else { onOpen(); } }}
+        onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+        style={{ textAlign: "left", cursor: "pointer", padding: 16, font: "inherit", color: "inherit",
+          display: "block", width: "100%", position: "relative", zIndex: 1,
+          transform: `translateX(-${swiped ? DELETE_THRESHOLD : offset}px)`,
+          transition: startX.current === null ? "transform .25s ease" : "none" }}>
+        <div className="spread" style={{ alignItems: "flex-start" }}>
+          <div className="grow">
+            <div className="xb" style={{ fontSize: 17 }}>{p.customerName}</div>
+            <div className="sm muted" style={{ marginTop: 2, display: "flex", alignItems: "center", gap: 5 }}>
+              <Icon name="pin" size={13} /> {p.address || "No address yet"}
+            </div>
+          </div>
+          <span className={"pill " + p.status}><span className="dot" />{st.label}</span>
+        </div>
+        <div className="row" style={{ marginTop: 13, gap: 8, flexWrap: "wrap" }}>
+          <span className="pill" style={{ background: "var(--surface-3)" }}>{p.projectType}</span>
+          <span className="pill" style={{ background: "var(--surface-3)" }}><Icon name="rooms" size={13} />{p.rooms.length} room{p.rooms.length !== 1 ? "s" : ""}</span>
+          {sel > 0 && <span className="pill" style={{ background: "var(--surface-3)" }}><Icon name="check" size={13} />{sel} picked</span>}
+          {openTasks > 0 && <span className="pill quoting"><Icon name="tasks" size={13} />{openTasks} to-do</span>}
+        </div>
+        <div className="divider" style={{ margin: "13px 0 10px" }} />
+        <div className="spread">
+          <span className="tiny muted">Updated {relTime(p.updatedAt)}</span>
+          <span className="tiny b" style={{ color: "var(--accent)", display: "flex", alignItems: "center", gap: 3 }}>Open<Icon name="chevron" size={14} /></span>
+        </div>
+      </button>
+    </div>
   );
 }
 
@@ -1127,7 +1173,8 @@ function NewProjectSheet({ onClose, onCreate }) {
   function create() {
     if (!valid) return;
     const now = Date.now();
-    onCreate({ id: window.FW.uid("p"), ...f, status: "lead", budget: 0, targetDate: "", notes: "", createdAt: now, updatedAt: now, rooms: [], tasks: [] });
+    const defaultTasks = window.FW.DEFAULT_TASKS.map((text, i) => ({ id: window.FW.uid("t"), text, done: false, due: "" }));
+    onCreate({ id: window.FW.uid("p"), ...f, status: "lead", budget: 0, targetDate: "", notes: "", createdAt: now, updatedAt: now, rooms: [], tasks: defaultTasks });
   }
   return (
     <Sheet title="New project" onClose={onClose}
@@ -1880,6 +1927,7 @@ function ProjectDetail({ p, mutate, actions }) {
   const [tab, setTab] = useState("overview");
   const [exporting, setExporting] = useState(false);
   const [photos, setPhotos] = useState(false);
+  const [editingContact, setEditingContact] = useState(false);
   const ctx = p.visitContext || "store";
   const openTasks = p.tasks.filter(t => !t.done).length;
   const unanswered = window.FW.QUESTIONS.filter(q => q.ctx.includes(ctx)).filter(q => !((p.answers || {})[q.id] || {}).val).length;
@@ -1899,7 +1947,7 @@ function ProjectDetail({ p, mutate, actions }) {
       <div className="topbar">
         <button className="iconbtn" onClick={goBack} aria-label={tab !== "overview" ? "Back to overview" : "Back to all projects"}><Icon name="back" /></button>
         <div className="grow" style={{ minWidth: 0 }}>
-          <h1>{p.customerName}</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}><h1 style={{ margin: 0 }}>{p.customerName}</h1><button className="iconbtn ghost" style={{ width: 28, height: 28, flex: "none" }} onClick={() => setEditingContact(true)} aria-label="Edit customer"><Icon name="edit" size={14} /></button></div>
           <div className="sub">{tab !== "overview" ? ("‹ Overview · " + (TABS.find(x => x.id === tab) || {}).label) : p.projectType}</div>
         </div>
         <button className="iconbtn" onClick={() => setPhotos(true)} aria-label="Photos" style={{ position: "relative" }}>
@@ -1940,6 +1988,7 @@ function ProjectDetail({ p, mutate, actions }) {
 
       {exporting && <ExportSheet p={p} onClose={() => setExporting(false)} />}
       {photos && <ProjectPhotosSheet p={p} mutate={mutate} onClose={() => setPhotos(false)} />}
+      {editingContact && <EditContactSheet p={p} mutate={mutate} onClose={() => setEditingContact(false)} />}
     </div>
   );
 }
